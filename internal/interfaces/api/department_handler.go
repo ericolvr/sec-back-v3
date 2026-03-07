@@ -59,6 +59,7 @@ func (h *DepartmentHandler) List(c *gin.Context) {
 	tenantID := middleware.GetPartnerID(c)
 	limitStr := c.DefaultQuery("limit", "20")
 	offsetStr := c.DefaultQuery("offset", "0")
+	companyIDStr := c.Query("company_id")
 
 	limit, err := strconv.Atoi(limitStr)
 	if err != nil {
@@ -70,6 +71,35 @@ func (h *DepartmentHandler) List(c *gin.Context) {
 		offset = 0
 	}
 
+	// Se company_id for fornecido, filtra por company
+	if companyIDStr != "" {
+		companyID, err := strconv.ParseInt(companyIDStr, 10, 64)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "company_id deve ser um número válido",
+			})
+			return
+		}
+
+		departments, err := h.departmentService.ListByCompany(c.Request.Context(), tenantID, companyID, limit, offset)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error":   "Erro ao listar departamentos",
+				"details": err.Error(),
+			})
+			return
+		}
+
+		var responses []dto.DepartmentResponse
+		for _, department := range departments {
+			responses = append(responses, h.toDepartmentResponse(department))
+		}
+
+		c.JSON(http.StatusOK, responses)
+		return
+	}
+
+	// Lista todos os departments do partner
 	departments, err := h.departmentService.List(c.Request.Context(), tenantID, limit, offset)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{

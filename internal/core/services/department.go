@@ -38,6 +38,16 @@ func (s *DepartmentService) List(ctx context.Context, partnerID int64, limit, of
 	return s.departmentRepo.List(ctx, partnerID, int64(limit), int64(offset))
 }
 
+func (s *DepartmentService) ListByCompany(ctx context.Context, partnerID, companyID int64, limit, offset int) ([]*domain.Department, error) {
+	if limit <= 20 {
+		limit = 20
+	}
+	if offset < 0 {
+		offset = 0
+	}
+	return s.departmentRepo.ListByCompany(ctx, partnerID, companyID, int64(limit), int64(offset))
+}
+
 func (s *DepartmentService) GetByID(ctx context.Context, partnerID int64, id int) (*domain.Department, error) {
 	if id <= 0 {
 		return nil, errors.New("ID is required")

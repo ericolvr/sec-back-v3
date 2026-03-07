@@ -30,16 +30,18 @@ func (r *DepartmentRepository) List(ctx context.Context, partnerID int64, limit,
 		SELECT 
 			d.id, 
 			d.partner_id, 
-			d.company_id, 
+			d.company_id,
+			c.name as company_name,
 			d.name, 
 			d.active,
 			d.created_at,
 			d.updated_at,
 			COUNT(e.id) as total_employees
 		FROM departments d
+		INNER JOIN companies c ON d.company_id = c.id AND d.partner_id = c.partner_id
 		LEFT JOIN employees e ON d.id = e.department_id AND d.partner_id = e.partner_id
 		WHERE d.partner_id = $1 AND d.active = true
-		GROUP BY d.id, d.partner_id, d.company_id, d.name, d.active, d.created_at, d.updated_at
+		GROUP BY d.id, d.partner_id, d.company_id, c.name, d.name, d.active, d.created_at, d.updated_at
 		ORDER BY d.name ASC
 		LIMIT $2 OFFSET $3`
 
@@ -54,7 +56,7 @@ func (r *DepartmentRepository) List(ctx context.Context, partnerID int64, limit,
 	for rows.Next() {
 		var d domain.Department
 		var totalEmployees int
-		err := rows.Scan(&d.ID, &d.PartnerID, &d.CompanyID, &d.Name, &d.Active, &d.CreatedAt, &d.UpdatedAt, &totalEmployees)
+		err := rows.Scan(&d.ID, &d.PartnerID, &d.CompanyID, &d.CompanyName, &d.Name, &d.Active, &d.CreatedAt, &d.UpdatedAt, &totalEmployees)
 		if err != nil {
 			return nil, err
 		}
@@ -96,7 +98,13 @@ func (r *DepartmentRepository) Delete(ctx context.Context, partnerID, id int64) 
 }
 
 func (r *DepartmentRepository) ListByCompany(ctx context.Context, partnerID, companyID, limit, offset int64) ([]*domain.Department, error) {
-	query := `SELECT id, partner_id, company_id, name, active, created_at, updated_at FROM departments WHERE partner_id = $1 AND company_id = $2 AND active = true ORDER BY name LIMIT $3 OFFSET $4`
+	query := `
+		SELECT d.id, d.partner_id, d.company_id, c.name as company_name, d.name, d.active, d.created_at, d.updated_at 
+		FROM departments d
+		INNER JOIN companies c ON d.company_id = c.id AND d.partner_id = c.partner_id
+		WHERE d.partner_id = $1 AND d.company_id = $2 AND d.active = true 
+		ORDER BY d.name 
+		LIMIT $3 OFFSET $4`
 	rows, err := r.db.QueryContext(ctx, query, partnerID, companyID, limit, offset)
 	if err != nil {
 		return nil, err
@@ -106,7 +114,7 @@ func (r *DepartmentRepository) ListByCompany(ctx context.Context, partnerID, com
 	var departments []*domain.Department
 	for rows.Next() {
 		var d domain.Department
-		if err := rows.Scan(&d.ID, &d.PartnerID, &d.CompanyID, &d.Name, &d.Active, &d.CreatedAt, &d.UpdatedAt); err != nil {
+		if err := rows.Scan(&d.ID, &d.PartnerID, &d.CompanyID, &d.CompanyName, &d.Name, &d.Active, &d.CreatedAt, &d.UpdatedAt); err != nil {
 			return nil, err
 		}
 		departments = append(departments, &d)
@@ -142,16 +150,18 @@ func (r *DepartmentRepository) ListDeleted(ctx context.Context, partnerID int64,
 		SELECT 
 			d.id, 
 			d.partner_id, 
-			d.company_id, 
+			d.company_id,
+			c.name as company_name,
 			d.name, 
 			d.active,
 			d.created_at,
 			d.updated_at,
 			COUNT(e.id) as total_employees
 		FROM departments d
+		INNER JOIN companies c ON d.company_id = c.id AND d.partner_id = c.partner_id
 		LEFT JOIN employees e ON d.id = e.department_id AND d.partner_id = e.partner_id
 		WHERE d.partner_id = $1 AND d.active = false
-		GROUP BY d.id, d.partner_id, d.company_id, d.name, d.active, d.created_at, d.updated_at
+		GROUP BY d.id, d.partner_id, d.company_id, c.name, d.name, d.active, d.created_at, d.updated_at
 		ORDER BY d.name ASC
 		LIMIT $2 OFFSET $3`
 
@@ -166,7 +176,7 @@ func (r *DepartmentRepository) ListDeleted(ctx context.Context, partnerID int64,
 	for rows.Next() {
 		var d domain.Department
 		var totalEmployees int
-		err := rows.Scan(&d.ID, &d.PartnerID, &d.CompanyID, &d.Name, &d.Active, &d.CreatedAt, &d.UpdatedAt, &totalEmployees)
+		err := rows.Scan(&d.ID, &d.PartnerID, &d.CompanyID, &d.CompanyName, &d.Name, &d.Active, &d.CreatedAt, &d.UpdatedAt, &totalEmployees)
 		if err != nil {
 			return nil, err
 		}

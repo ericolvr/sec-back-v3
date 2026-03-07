@@ -17,6 +17,7 @@ type DepartmentResponse struct {
 	ID             int       `json:"id"`
 	PartnerID      int       `json:"partner_id"`
 	CompanyID      int       `json:"company_id"`
+	CompanyName    string    `json:"company_name,omitempty"`
 	Name           string    `json:"name"`
 	Active         bool      `json:"active"`
 	TotalEmployees int       `json:"total_employees"`

@@ -298,6 +298,7 @@ func (h *DepartmentHandler) toDepartmentResponse(department *domain.Department) 
 		ID:             int(department.ID),
 		PartnerID:      int(department.PartnerID),
 		CompanyID:      int(department.CompanyID),
+		CompanyName:    department.CompanyName,
 		Name:           department.Name,
 		Active:         department.Active,
 		TotalEmployees: department.TotalEmployees,

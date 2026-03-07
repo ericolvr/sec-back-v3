@@ -10,6 +10,7 @@ type Department struct {
 	ID             int64     `json:"id"`
 	PartnerID      int64     `json:"partner_id"` // Tenant raiz
 	CompanyID      int64     `json:"company_id"` // Cliente do Partner
+	CompanyName    string    `json:"company_name,omitempty"`
 	Name           string    `json:"name"`
 	Active         bool      `json:"active"`
 	CreatedAt      time.Time `json:"created_at"`

@@ -51,8 +51,8 @@ func (s *DepartmentService) Update(ctx context.Context, department *domain.Depar
 		return errors.New("ID is required for update")
 	}
 
-	if err := department.Validate(); err != nil {
-		return err
+	if department.Name == "" {
+		return errors.New("name is required")
 	}
 
 	_, err := s.departmentRepo.GetByID(ctx, department.PartnerID, int64(department.ID))
@@ -83,4 +83,22 @@ func (s *DepartmentService) Delete(ctx context.Context, partnerID int64, id int)
 		return nil, err
 	}
 	return department, nil
+}
+
+func (s *DepartmentService) ToggleActive(ctx context.Context, partnerID, id int64, active bool) error {
+	if partnerID <= 0 || id <= 0 {
+		return errors.New("invalid IDs")
+	}
+
+	return s.departmentRepo.ToggleActive(ctx, partnerID, id, active)
+}
+
+func (s *DepartmentService) ListDeleted(ctx context.Context, partnerID int64, limit, offset int) ([]*domain.Department, error) {
+	if limit <= 20 {
+		limit = 20
+	}
+	if offset < 0 {
+		offset = 0
+	}
+	return s.departmentRepo.ListDeleted(ctx, partnerID, int64(limit), int64(offset))
 }

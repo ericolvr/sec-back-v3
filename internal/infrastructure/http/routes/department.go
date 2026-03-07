@@ -18,13 +18,15 @@ func NewDepartmentRoutes(departmentHandler *api.DepartmentHandler) *DepartmentRo
 
 func (dr *DepartmentRoutes) SetupRoutes(v1 *gin.RouterGroup) {
 	departments := v1.Group("/departments")
-	departments.Use(middleware.TenantMiddleware())
+	departments.Use(middleware.PartnerMiddleware())
 	// departments.Use(middleware.JWTMiddleware())
 	{
 		departments.POST("", dr.departmentHandler.Create)
 		departments.GET("", dr.departmentHandler.List)
+		departments.GET("/deleted", dr.departmentHandler.ListDeleted)
 		departments.GET("/:id", dr.departmentHandler.GetByID)
 		departments.PATCH("/:id", dr.departmentHandler.Update)
 		departments.DELETE("/:id", dr.departmentHandler.Delete)
+		departments.PATCH("/:id/toggle-active", dr.departmentHandler.ToggleActive)
 	}
 }

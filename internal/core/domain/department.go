@@ -20,10 +20,12 @@ type Department struct {
 type DepartmentRepository interface {
 	Create(ctx context.Context, department *Department) error
 	List(ctx context.Context, partnerID int64, limit, offset int64) ([]*Department, error)
+	ListDeleted(ctx context.Context, partnerID int64, limit, offset int64) ([]*Department, error)
 	ListByCompany(ctx context.Context, partnerID, companyID int64, limit, offset int64) ([]*Department, error)
 	GetByID(ctx context.Context, partnerID, id int64) (*Department, error)
 	Update(ctx context.Context, department *Department) error
 	Delete(ctx context.Context, partnerID, id int64) error
+	ToggleActive(ctx context.Context, partnerID, id int64, active bool) error
 }
 
 func (d *Department) Validate() error {

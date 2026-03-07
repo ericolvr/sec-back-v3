@@ -18,7 +18,7 @@ func NewUserRoutes(userHandler *api.UserHandler) *UserRoutes {
 
 func (ur *UserRoutes) SetupRoutes(v1 *gin.RouterGroup) {
 	users := v1.Group("/users")
-	users.Use(middleware.TenantMiddleware())
+	users.Use(middleware.PartnerMiddleware())
 	// users.Use(middleware.JWTMiddleware())
 	{
 		users.POST("", ur.userHandler.Create)

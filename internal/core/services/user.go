@@ -42,20 +42,33 @@ func (s *UserService) CreateWithPassword(ctx context.Context, user *domain.User,
 		return err
 	}
 
-	if s.smsService != nil && user.Mobile != "" {
-		fmt.Printf("[SMS_SECURITY] Enviando senha via SMS para usuário ID:%d, Mobile:%s\n", user.ID, user.Mobile)
-		msg := domain.SMSMessage{
-			To:      user.Mobile,
-			Message: fmt.Sprintf("Olá %s, sua senha é: %s", user.Name, plainPassword),
-		}
-		if err := s.smsService.SendSMS(msg); err != nil {
-			fmt.Printf("⚠️  [SMS_ERROR] Falha ao enviar SMS para %s: %v\n", user.Mobile, err)
+	// Print da senha gerada para visualização
+	fmt.Printf("\n🔑 ========================================\n")
+	fmt.Printf("   SENHA GERADA PARA USUÁRIO\n")
+	fmt.Printf("========================================\n")
+	fmt.Printf("   ID: %d\n", user.ID)
+	fmt.Printf("   Nome: %s\n", user.Name)
+	fmt.Printf("   Mobile: %s\n", user.Mobile)
+	fmt.Printf("   Senha: %s\n", plainPassword)
+	fmt.Printf("========================================\n\n")
+
+	// Temporariamente comentado - envio de SMS
+	/*
+		if s.smsService != nil && user.Mobile != "" {
+			fmt.Printf("[SMS_SECURITY] Enviando senha via SMS para usuário ID:%d, Mobile:%s\n", user.ID, user.Mobile)
+			msg := domain.SMSMessage{
+				To:      user.Mobile,
+				Message: fmt.Sprintf("Olá %s, sua senha é: %s", user.Name, plainPassword),
+			}
+			if err := s.smsService.SendSMS(msg); err != nil {
+				fmt.Printf("⚠️  [SMS_ERROR] Falha ao enviar SMS para %s: %v\n", user.Mobile, err)
+			} else {
+				fmt.Printf("✅ [SMS_SUCCESS] SMS enviado com sucesso para %s\n", user.Mobile)
+			}
 		} else {
-			fmt.Printf("✅ [SMS_SUCCESS] SMS enviado com sucesso para %s\n", user.Mobile)
+			fmt.Printf("[SMS_SKIP] Usuário ID:%d sem número de celular ou SMS service não configurado\n", user.ID)
 		}
-	} else {
-		fmt.Printf("[SMS_SKIP] Usuário ID:%d sem número de celular ou SMS service não configurado\n", user.ID)
-	}
+	*/
 
 	return nil
 }
@@ -107,20 +120,33 @@ func (s *UserService) UpdatePasswordWithSMS(ctx context.Context, user *domain.Us
 		return err
 	}
 
-	if s.smsService != nil && user.Mobile != "" {
-		fmt.Printf("[SMS_SECURITY] Reset de senha - Enviando SMS para usuário ID:%d, Mobile:%s\n", user.ID, user.Mobile)
-		msg := domain.SMSMessage{
-			To:      user.Mobile,
-			Message: fmt.Sprintf("Olá %s, sua nova senha é: %s", user.Name, plainPassword),
-		}
-		if err := s.smsService.SendSMS(msg); err != nil {
-			fmt.Printf("⚠️  [SMS_ERROR] Falha ao enviar SMS para %s: %v\n", user.Mobile, err)
+	// Print da nova senha gerada
+	fmt.Printf("\n🔄 ========================================\n")
+	fmt.Printf("   SENHA RESETADA PARA USUÁRIO\n")
+	fmt.Printf("========================================\n")
+	fmt.Printf("   ID: %d\n", user.ID)
+	fmt.Printf("   Nome: %s\n", user.Name)
+	fmt.Printf("   Mobile: %s\n", user.Mobile)
+	fmt.Printf("   Nova Senha: %s\n", plainPassword)
+	fmt.Printf("========================================\n\n")
+
+	// Temporariamente comentado - envio de SMS
+	/*
+		if s.smsService != nil && user.Mobile != "" {
+			fmt.Printf("[SMS_SECURITY] Reset de senha - Enviando SMS para usuário ID:%d, Mobile:%s\n", user.ID, user.Mobile)
+			msg := domain.SMSMessage{
+				To:      user.Mobile,
+				Message: fmt.Sprintf("Olá %s, sua nova senha é: %s", user.Name, plainPassword),
+			}
+			if err := s.smsService.SendSMS(msg); err != nil {
+				fmt.Printf("⚠️  [SMS_ERROR] Falha ao enviar SMS para %s: %v\n", user.Mobile, err)
+			} else {
+				fmt.Printf("✅ [SMS_SUCCESS] SMS de reset enviado com sucesso para %s\n", user.Mobile)
+			}
 		} else {
-			fmt.Printf("✅ [SMS_SUCCESS] SMS de reset enviado com sucesso para %s\n", user.Mobile)
+			fmt.Printf("[SMS_SKIP] Usuário ID:%d sem número de celular ou SMS service não configurado\n", user.ID)
 		}
-	} else {
-		fmt.Printf("[SMS_SKIP] Usuário ID:%d sem número de celular ou SMS service não configurado\n", user.ID)
-	}
+	*/
 
 	return nil
 }

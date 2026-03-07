@@ -18,8 +18,8 @@ func NewEmployeeRepository(db *sql.DB) *EmployeeRepository {
 
 func (r *EmployeeRepository) Create(ctx context.Context, employee *domain.Employee) error {
 	query := `
-		INSERT INTO employees (partner_id, department_id, name, email, active, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6)
+		INSERT INTO employees (partner_id, company_id, department_id, name, email, mobile, active, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		RETURNING id
 	`
 	now := time.Now()
@@ -27,9 +27,11 @@ func (r *EmployeeRepository) Create(ctx context.Context, employee *domain.Employ
 		ctx,
 		query,
 		employee.PartnerID,
+		employee.CompanyID,
 		employee.DepartmentID,
 		employee.Name,
 		employee.Email,
+		employee.Mobile,
 		employee.Active,
 		now,
 	).Scan(&employee.ID)
@@ -44,9 +46,11 @@ func (r *EmployeeRepository) List(ctx context.Context, tenantID, limit, offset i
 		SELECT 
 			e.id, 
 			e.partner_id, 
+			e.company_id, 
 			e.department_id, 
 			e.name, 
 			e.email, 
+			e.mobile, 
 			e.active, 
 			e.created_at,
 			d.id,
@@ -73,9 +77,11 @@ func (r *EmployeeRepository) List(ctx context.Context, tenantID, limit, offset i
 		err := rows.Scan(
 			&e.ID,
 			&e.PartnerID,
+			&e.CompanyID,
 			&e.DepartmentID,
 			&e.Name,
 			&e.Email,
+			&e.Mobile,
 			&e.Active,
 			&e.CreatedAt,
 			&d.ID,
@@ -99,9 +105,11 @@ func (r *EmployeeRepository) ListByDepartment(ctx context.Context, tenantID, dep
 		SELECT 
 			e.id, 
 			e.partner_id, 
+			e.company_id, 
 			e.department_id, 
 			e.name, 
 			e.email, 
+			e.mobile, 
 			e.active, 
 			e.created_at,
 			d.id,
@@ -128,9 +136,11 @@ func (r *EmployeeRepository) ListByDepartment(ctx context.Context, tenantID, dep
 		err := rows.Scan(
 			&e.ID,
 			&e.PartnerID,
+			&e.CompanyID,
 			&e.DepartmentID,
 			&e.Name,
 			&e.Email,
+			&e.Mobile,
 			&e.Active,
 			&e.CreatedAt,
 			&d.ID,
@@ -154,9 +164,11 @@ func (r *EmployeeRepository) GetByID(ctx context.Context, tenantID, id int64) (*
 		SELECT 
 			e.id, 
 			e.partner_id, 
+			e.company_id, 
 			e.department_id, 
 			e.name, 
 			e.email, 
+			e.mobile, 
 			e.active, 
 			e.created_at,
 			d.id,
@@ -172,9 +184,11 @@ func (r *EmployeeRepository) GetByID(ctx context.Context, tenantID, id int64) (*
 	err := r.db.QueryRowContext(ctx, query, tenantID, id).Scan(
 		&e.ID,
 		&e.PartnerID,
+		&e.CompanyID,
 		&e.DepartmentID,
 		&e.Name,
 		&e.Email,
+		&e.Mobile,
 		&e.Active,
 		&e.CreatedAt,
 		&d.ID,
@@ -194,25 +208,29 @@ func (r *EmployeeRepository) GetByID(ctx context.Context, tenantID, id int64) (*
 func (r *EmployeeRepository) Update(ctx context.Context, employee *domain.Employee) error {
 	query := `
 		UPDATE employees
-		SET department_id = $1, name = $2, email = $3, active = $4
-		WHERE partner_id = $5 AND id = $6
-		RETURNING id, partner_id, department_id, name, email, active, created_at
+		SET company_id = $1, department_id = $2, name = $3, email = $4, mobile = $5, active = $6
+		WHERE partner_id = $7 AND id = $8
+		RETURNING id, partner_id, company_id, department_id, name, email, mobile, active, created_at
 	`
 	err := r.db.QueryRowContext(
 		ctx,
 		query,
+		employee.CompanyID,
 		employee.DepartmentID,
 		employee.Name,
 		employee.Email,
+		employee.Mobile,
 		employee.Active,
 		employee.PartnerID,
 		employee.ID,
 	).Scan(
 		&employee.ID,
 		&employee.PartnerID,
+		&employee.CompanyID,
 		&employee.DepartmentID,
 		&employee.Name,
 		&employee.Email,
+		&employee.Mobile,
 		&employee.Active,
 		&employee.CreatedAt,
 	)
@@ -226,20 +244,20 @@ func (r *EmployeeRepository) Delete(ctx context.Context, tenantID, id int64) err
 }
 
 func (r *EmployeeRepository) ListByCompany(ctx context.Context, partnerID, companyID, limit, offset int64) ([]*domain.Employee, error) {
-query := `SELECT e.id, e.partner_id, e.company_id, e.department_id, e.name, e.name, e.mobile, e.email, e.active, e.created_at, e.updated_at FROM employees e WHERE e.partner_id = $1 AND e.company_id = $2 ORDER BY e.name LIMIT $3 OFFSET $4`
-rows, err := r.db.QueryContext(ctx, query, partnerID, companyID, limit, offset)
-if err != nil {
-return nil, err
-}
-defer rows.Close()
+	query := `SELECT e.id, e.partner_id, e.company_id, e.department_id, e.name, e.name, e.mobile, e.email, e.active, e.created_at, e.updated_at FROM employees e WHERE e.partner_id = $1 AND e.company_id = $2 ORDER BY e.name LIMIT $3 OFFSET $4`
+	rows, err := r.db.QueryContext(ctx, query, partnerID, companyID, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
 
-var employees []*domain.Employee
-for rows.Next() {
-var e domain.Employee
-if err := rows.Scan(&e.ID, &e.PartnerID, &e.CompanyID, &e.DepartmentID, &e.Name, &e.Mobile, &e.Email, &e.Active, &e.CreatedAt, &e.UpdatedAt); err != nil {
-return nil, err
-}
-employees = append(employees, &e)
-}
-return employees, rows.Err()
+	var employees []*domain.Employee
+	for rows.Next() {
+		var e domain.Employee
+		if err := rows.Scan(&e.ID, &e.PartnerID, &e.CompanyID, &e.DepartmentID, &e.Name, &e.Mobile, &e.Email, &e.Active, &e.CreatedAt, &e.UpdatedAt); err != nil {
+			return nil, err
+		}
+		employees = append(employees, &e)
+	}
+	return employees, rows.Err()
 }

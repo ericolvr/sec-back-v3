@@ -18,7 +18,7 @@ func NewEmployeeRoutes(employeeHandler *api.EmployeeHandler) *EmployeeRoutes {
 
 func (er *EmployeeRoutes) SetupRoutes(v1 *gin.RouterGroup) {
 	employees := v1.Group("/employees")
-	employees.Use(middleware.TenantMiddleware())
+	employees.Use(middleware.PartnerMiddleware())
 	// employees.Use(middleware.JWTMiddleware())
 	{
 		employees.POST("", er.employeeHandler.Create)

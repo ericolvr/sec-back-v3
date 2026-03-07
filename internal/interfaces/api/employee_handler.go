@@ -35,11 +35,13 @@ func (h *EmployeeHandler) Create(c *gin.Context) {
 	}
 
 	employee := &domain.Employee{
-		PartnerID:     tenantID,
-		Name:         dto.Name,
+		PartnerID:    tenantID,
+		CompanyID:    dto.CompanyID,
 		DepartmentID: dto.DepartmentID,
+		Name:         dto.Name,
 		Email:        dto.Email,
-		Active:       true,
+		Mobile:       dto.Mobile,
+		Active:       dto.Active,
 		CreatedAt:    time.Now(),
 	}
 
@@ -136,10 +138,12 @@ func (h *EmployeeHandler) Update(c *gin.Context) {
 
 	employee := &domain.Employee{
 		ID:           idInt,
-		PartnerID:     tenantID,
+		PartnerID:    tenantID,
+		CompanyID:    updateDTO.CompanyID,
 		DepartmentID: updateDTO.DepartmentID,
 		Name:         updateDTO.Name,
 		Email:        updateDTO.Email,
+		Mobile:       updateDTO.Mobile,
 		Active:       updateDTO.Active,
 	}
 
@@ -195,9 +199,11 @@ func (h *EmployeeHandler) Delete(c *gin.Context) {
 func (h *EmployeeHandler) toEmployeeResponse(employee *domain.Employee) dto.EmployeeResponse {
 	response := dto.EmployeeResponse{
 		ID:           int(employee.ID),
+		CompanyID:    employee.CompanyID,
 		DepartmentID: employee.DepartmentID,
 		Name:         employee.Name,
 		Email:        employee.Email,
+		Mobile:       employee.Mobile,
 		Active:       employee.Active,
 		CreatedAt:    employee.CreatedAt.Format("2006-01-02 15:04:05"),
 	}

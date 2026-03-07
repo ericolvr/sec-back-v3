@@ -89,7 +89,7 @@ func (s *Server) setupMiddleware(engine *gin.Engine) {
 	config := cors.DefaultConfig()
 	config.AllowAllOrigins = true
 	config.AllowMethods = []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"}
-	config.AllowHeaders = []string{"Origin", "Content-Type", "Accept", "Authorization", "X-Requested-With", "X-Tenant-ID"}
+	config.AllowHeaders = []string{"Origin", "Content-Type", "Accept", "Authorization", "X-Requested-With", "X-Tenant-ID", "X-Partner-ID"}
 	engine.Use(cors.New(config))
 
 	engine.Use(func(c *gin.Context) {

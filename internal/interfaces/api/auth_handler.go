@@ -50,9 +50,9 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		"message": "Login successful",
 		"token":   token,
 		"user": gin.H{
-			"tenant_id": int(user.PartnerID),
-			"name":      user.Name,
-			"type":      user.Type,
+			"partner_id": int(user.PartnerID),
+			"name":       user.Name,
+			"type":       user.Type,
 		},
 	})
 }

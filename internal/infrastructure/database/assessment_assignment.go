@@ -34,18 +34,35 @@ func (r *AssessmentAssignmentRepository) Create(ctx context.Context, assignment 
 
 func (r *AssessmentAssignmentRepository) GetByID(ctx context.Context, partnerID, id int64) (*domain.AssessmentAssignment, error) {
 	query := `
-		SELECT id, partner_id, template_id, department_ids, active, started_at, closed_at, created_at, updated_at
-		FROM assessment_assignments
-		WHERE partner_id = $1 AND id = $2`
+		SELECT 
+			aa.id, aa.partner_id, aa.template_id, aa.department_ids, aa.active, 
+			aa.started_at, aa.closed_at, aa.created_at, aa.updated_at,
+			at.name as template_name,
+			COALESCE(array_agg(d.name ORDER BY d.id) FILTER (WHERE d.id IS NOT NULL), '{}') as department_names
+		FROM assessment_assignments aa
+		LEFT JOIN assessment_templates at ON aa.template_id = at.id
+		LEFT JOIN LATERAL unnest(aa.department_ids) dept_id ON true
+		LEFT JOIN departments d ON d.id = dept_id AND d.partner_id = aa.partner_id
+		WHERE aa.partner_id = $1 AND aa.id = $2
+		GROUP BY aa.id, aa.partner_id, aa.template_id, aa.department_ids, aa.active, 
+			aa.started_at, aa.closed_at, aa.created_at, aa.updated_at, at.name`
 
 	var qa domain.AssessmentAssignment
+	var templateName sql.NullString
+
 	err := r.db.QueryRowContext(ctx, query, partnerID, id).Scan(
 		&qa.ID, &qa.PartnerID, &qa.TemplateID, pq.Array(&qa.DepartmentIDs), &qa.Active,
 		&qa.StartedAt, &qa.ClosedAt, &qa.CreatedAt, &qa.UpdatedAt,
+		&templateName,
+		pq.Array(&qa.Departments),
 	)
 
 	if err != nil {
 		return nil, err
+	}
+
+	if templateName.Valid {
+		qa.TemplateName = templateName.String
 	}
 
 	return &qa, nil

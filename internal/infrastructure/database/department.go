@@ -60,6 +60,7 @@ func (r *DepartmentRepository) List(ctx context.Context, partnerID int64, limit,
 		if err != nil {
 			return nil, err
 		}
+		d.TotalEmployees = totalEmployees
 		departments = append(departments, &d)
 	}
 	return departments, nil
@@ -180,6 +181,7 @@ func (r *DepartmentRepository) ListDeleted(ctx context.Context, partnerID int64,
 		if err != nil {
 			return nil, err
 		}
+		d.TotalEmployees = totalEmployees
 		departments = append(departments, &d)
 	}
 	return departments, nil

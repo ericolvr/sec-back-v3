@@ -37,17 +37,18 @@ func (r *InvitationRepository) Create(ctx context.Context, invitation *domain.In
 
 func (r *InvitationRepository) GetByID(ctx context.Context, partnerID, id int64) (*domain.Invitation, error) {
 	query := `
-		SELECT id, partner_id, employee_id, template_id, department_id,
-			   token, sent, sent_at, created_at
-		FROM invitations
-		WHERE partner_id = $1 AND id = $2`
+		SELECT i.id, i.partner_id, i.employee_id, i.template_id, t.name as template_name,
+			   i.department_id, i.token, i.sent, i.sent_at, i.created_at
+		FROM invitations i
+		LEFT JOIN assessment_templates t ON i.template_id = t.id AND i.partner_id = t.partner_id
+		WHERE i.partner_id = $1 AND i.id = $2`
 
 	var inv domain.Invitation
 	var sent bool
 
 	err := r.db.QueryRowContext(ctx, query, partnerID, id).Scan(
-		&inv.ID, &inv.PartnerID, &inv.ResponseID, &inv.TemplateID, &inv.DepartmentID,
-		&inv.EmployeeEmail, &sent, &inv.SentAt, &inv.CreatedAt,
+		&inv.ID, &inv.PartnerID, &inv.ResponseID, &inv.TemplateID, &inv.TemplateName,
+		&inv.DepartmentID, &inv.EmployeeEmail, &sent, &inv.SentAt, &inv.CreatedAt,
 	)
 
 	if err != nil {
@@ -65,11 +66,12 @@ func (r *InvitationRepository) GetByID(ctx context.Context, partnerID, id int64)
 
 func (r *InvitationRepository) List(ctx context.Context, partnerID, limit, offset int64) ([]*domain.Invitation, error) {
 	query := `
-		SELECT id, partner_id, employee_id, template_id, department_id,
-			   token, sent, sent_at, created_at
-		FROM invitations
-		WHERE partner_id = $1
-		ORDER BY created_at DESC
+		SELECT i.id, i.partner_id, i.employee_id, i.template_id, t.name as template_name,
+			   i.department_id, i.token, i.sent, i.sent_at, i.created_at
+		FROM invitations i
+		LEFT JOIN assessment_templates t ON i.template_id = t.id AND i.partner_id = t.partner_id
+		WHERE i.partner_id = $1
+		ORDER BY i.created_at DESC
 		LIMIT $2 OFFSET $3`
 
 	rows, err := r.db.QueryContext(ctx, query, partnerID, limit, offset)
@@ -78,7 +80,7 @@ func (r *InvitationRepository) List(ctx context.Context, partnerID, limit, offse
 	}
 	defer rows.Close()
 
-	return r.scanInvitations(rows)
+	return r.scanInvitationsWithTemplate(rows)
 }
 
 func (r *InvitationRepository) ListByTemplateAndDepartment(ctx context.Context, partnerID, templateID, departmentID int64) ([]*domain.Invitation, error) {
@@ -157,6 +159,34 @@ func (r *InvitationRepository) scanInvitations(rows *sql.Rows) ([]*domain.Invita
 		err := rows.Scan(
 			&inv.ID, &inv.PartnerID, &inv.ResponseID, &inv.TemplateID, &inv.DepartmentID,
 			&inv.EmployeeEmail, &sent, &inv.SentAt, &inv.CreatedAt,
+		)
+
+		if err != nil {
+			return nil, err
+		}
+
+		if sent {
+			inv.Status = domain.InvitationStatusSent
+		} else {
+			inv.Status = domain.InvitationStatusPending
+		}
+
+		invitations = append(invitations, &inv)
+	}
+
+	return invitations, rows.Err()
+}
+
+func (r *InvitationRepository) scanInvitationsWithTemplate(rows *sql.Rows) ([]*domain.Invitation, error) {
+	var invitations []*domain.Invitation
+
+	for rows.Next() {
+		var inv domain.Invitation
+		var sent bool
+
+		err := rows.Scan(
+			&inv.ID, &inv.PartnerID, &inv.ResponseID, &inv.TemplateID, &inv.TemplateName,
+			&inv.DepartmentID, &inv.EmployeeEmail, &sent, &inv.SentAt, &inv.CreatedAt,
 		)
 
 		if err != nil {

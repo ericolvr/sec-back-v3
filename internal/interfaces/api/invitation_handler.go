@@ -193,6 +193,7 @@ func (h *InvitationHandler) toInvitationResponse(invitation *domain.Invitation) 
 		ID:              invitation.ID,
 		PartnerID:       invitation.PartnerID,
 		TemplateID:      invitation.TemplateID,
+		TemplateName:    invitation.TemplateName,
 		DepartmentID:    invitation.DepartmentID,
 		ResponseID:      invitation.ResponseID,
 		InvitationToken: invitation.EmployeeEmail,

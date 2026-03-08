@@ -13,16 +13,17 @@ const (
 )
 
 type Invitation struct {
-	ID              int64      `json:"id"`
-	PartnerID        int64      `json:"partner_id"`
-	TemplateID int64      `json:"template_id"`
-	DepartmentID    int64      `json:"department_id"`
-	ResponseID      int64      `json:"response_id"`
-	EmployeeEmail   string     `json:"employee_email"`
-	Status          string     `json:"status"`
-	SentAt          *time.Time `json:"sent_at"`
-	CreatedAt       time.Time  `json:"created_at"`
-	UpdatedAt       time.Time  `json:"updated_at"`
+	ID            int64      `json:"id"`
+	PartnerID     int64      `json:"partner_id"`
+	TemplateID    int64      `json:"template_id"`
+	TemplateName  string     `json:"template_name,omitempty"`
+	DepartmentID  int64      `json:"department_id"`
+	ResponseID    int64      `json:"response_id"`
+	EmployeeEmail string     `json:"employee_email"`
+	Status        string     `json:"status"`
+	SentAt        *time.Time `json:"sent_at"`
+	CreatedAt     time.Time  `json:"created_at"`
+	UpdatedAt     time.Time  `json:"updated_at"`
 }
 
 type InvitationRepository interface {

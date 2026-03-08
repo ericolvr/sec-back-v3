@@ -11,6 +11,8 @@ type AssessmentAssignment struct {
 	PartnerID      int64      `json:"partner_id"`
 	TemplateID     int64      `json:"template_id"`
 	TemplateName   string     `json:"template_name,omitempty"`
+	CompanyID      int64      `json:"company_id,omitempty"`
+	CompanyName    string     `json:"company_name,omitempty"`
 	DepartmentID   int64      `json:"department_id"`
 	DepartmentName string     `json:"department_name,omitempty"`
 	Active         bool       `json:"active"`

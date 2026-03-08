@@ -1,11 +1,6 @@
 package dto
 
 type CreateAssessmentAssignmentRequest struct {
-	TemplateID   int64 `json:"template_id" binding:"required"`
-	DepartmentID int64 `json:"department_id" binding:"required"`
-}
-
-type CreateAssessmentAssignmentBatchRequest struct {
 	TemplateID    int64   `json:"template_id" binding:"required"`
 	DepartmentIDs []int64 `json:"department_ids" binding:"required,min=1"`
 }

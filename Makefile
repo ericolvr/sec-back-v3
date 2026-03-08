@@ -112,12 +112,12 @@ db-migrate:
 		fi; \
 	fi
 	@echo "$(COLOR_BLUE)Waiting for database to be ready...$(COLOR_RESET)"
-	@until docker exec nr1-postgres pg_isready -U $$(grep DB_USER .env | cut -d'=' -f2) -d $$(grep DB_NAME .env | cut -d'=' -f2) > /dev/null 2>&1; do \
+	@until docker exec nr1-postgres_version2 pg_isready -U $$(grep DB_USER .env | cut -d'=' -f2) -d $$(grep DB_NAME .env | cut -d'=' -f2) > /dev/null 2>&1; do \
 		echo "$(COLOR_YELLOW)⏳ Waiting for database...$(COLOR_RESET)"; \
 		sleep 2; \
 	done
 	@echo "$(COLOR_BLUE)Running SQL migrations...$(COLOR_RESET)"
-	docker exec -i nr1-postgres psql -U $$(grep DB_USER .env | cut -d'=' -f2) -d $$(grep DB_NAME .env | cut -d'=' -f2) < scripts/init.sql
+	docker exec -i nr1-postgres_version2 psql -U $$(grep DB_USER .env | cut -d'=' -f2) -d $$(grep DB_NAME .env | cut -d'=' -f2) < scripts/init.sql
 	@echo "$(COLOR_GREEN)✅ Database migrations completed!$(COLOR_RESET)"
 
 db-reset: db-clean db-start db-migrate

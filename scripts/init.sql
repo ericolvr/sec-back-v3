@@ -8,7 +8,7 @@ DROP TABLE IF EXISTS action_plan_templates CASCADE;
 DROP TABLE IF EXISTS risk_categories CASCADE;
 DROP TABLE IF EXISTS action_plans CASCADE;
 DROP TABLE IF EXISTS invitations CASCADE;
-DROP TABLE IF EXISTS questionnaire_assignments CASCADE;
+DROP TABLE IF EXISTS assessment_assignments CASCADE;
 DROP TABLE IF EXISTS analytics_reports CASCADE;
 DROP TABLE IF EXISTS users CASCADE;
 DROP TABLE IF EXISTS answers CASCADE;
@@ -190,7 +190,7 @@ CREATE TABLE employee_submissions (
     id SERIAL PRIMARY KEY,
     partner_id BIGINT NOT NULL,
     company_id BIGINT NOT NULL,
-    questionnaire_id BIGINT NOT NULL,
+    template_id BIGINT NOT NULL,
     employee_id BIGINT NOT NULL,
     department_id BIGINT NOT NULL,
     invitation_token VARCHAR(255) UNIQUE,
@@ -200,7 +200,7 @@ CREATE TABLE employee_submissions (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (partner_id) REFERENCES partners(id) ON DELETE CASCADE,
     FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE,
-    FOREIGN KEY (questionnaire_id) REFERENCES assessment_templates(id) ON DELETE CASCADE,
+    FOREIGN KEY (template_id) REFERENCES assessment_templates(id) ON DELETE CASCADE,
     FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE CASCADE,
     FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE CASCADE
 );
@@ -241,7 +241,7 @@ CREATE TABLE risk_metrics (
     partner_id BIGINT NOT NULL,
     company_id BIGINT NOT NULL,
     department_id BIGINT NOT NULL,
-    questionnaire_id BIGINT NOT NULL,
+    template_id BIGINT NOT NULL,
     
     -- Métricas
     total_employees INT DEFAULT 0,
@@ -264,37 +264,39 @@ CREATE TABLE risk_metrics (
     FOREIGN KEY (partner_id) REFERENCES partners(id) ON DELETE CASCADE,
     FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE,
     FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE CASCADE,
-    FOREIGN KEY (questionnaire_id) REFERENCES assessment_templates(id) ON DELETE CASCADE,
+    FOREIGN KEY (template_id) REFERENCES assessment_templates(id) ON DELETE CASCADE,
     
-    -- Unique constraint: 1 métrica por departamento/questionário
-    UNIQUE(partner_id, company_id, department_id, questionnaire_id)
+    -- Unique constraint: 1 métrica por departamento/template
+    UNIQUE(partner_id, company_id, department_id, template_id)
 );
 
 CREATE INDEX idx_risk_metrics_partner_id ON risk_metrics(partner_id);
 CREATE INDEX idx_risk_metrics_company_id ON risk_metrics(company_id);
 CREATE INDEX idx_risk_metrics_department_id ON risk_metrics(department_id);
-CREATE INDEX idx_risk_metrics_questionnaire_id ON risk_metrics(questionnaire_id);
+CREATE INDEX idx_risk_metrics_template_id ON risk_metrics(template_id);
 CREATE INDEX idx_risk_metrics_risk_level ON risk_metrics(risk_level);
 
 -- ============================================
--- QUESTIONNAIRE ASSIGNMENTS
+-- ASSESSMENT ASSIGNMENTS
 -- ============================================
-CREATE TABLE questionnaire_assignments (
+CREATE TABLE assessment_assignments (
     id SERIAL PRIMARY KEY,
     partner_id BIGINT NOT NULL,
-    questionnaire_id BIGINT NOT NULL,
+    template_id BIGINT NOT NULL,
     department_id BIGINT NOT NULL,
     active BOOLEAN DEFAULT true,
+    started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    closed_at TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (partner_id) REFERENCES partners(id) ON DELETE CASCADE,
-    FOREIGN KEY (questionnaire_id) REFERENCES assessment_templates(id) ON DELETE CASCADE,
+    FOREIGN KEY (template_id) REFERENCES assessment_templates(id) ON DELETE CASCADE,
     FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE CASCADE
 );
 
-CREATE INDEX idx_questionnaire_assignments_partner_id ON questionnaire_assignments(partner_id);
-CREATE INDEX idx_questionnaire_assignments_questionnaire_id ON questionnaire_assignments(questionnaire_id);
-CREATE INDEX idx_questionnaire_assignments_department_id ON questionnaire_assignments(department_id);
+CREATE INDEX idx_assessment_assignments_partner_id ON assessment_assignments(partner_id);
+CREATE INDEX idx_assessment_assignments_template_id ON assessment_assignments(template_id);
+CREATE INDEX idx_assessment_assignments_department_id ON assessment_assignments(department_id);
 
 -- ============================================
 -- INVITATIONS
@@ -303,7 +305,7 @@ CREATE TABLE invitations (
     id SERIAL PRIMARY KEY,
     partner_id BIGINT NOT NULL,
     employee_id BIGINT NOT NULL,
-    questionnaire_id BIGINT NOT NULL,
+    template_id BIGINT NOT NULL,
     department_id BIGINT NOT NULL,
     token VARCHAR(255) UNIQUE NOT NULL,
     sent BOOLEAN DEFAULT false,
@@ -311,83 +313,13 @@ CREATE TABLE invitations (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (partner_id) REFERENCES partners(id) ON DELETE CASCADE,
     FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE CASCADE,
-    FOREIGN KEY (questionnaire_id) REFERENCES assessment_templates(id) ON DELETE CASCADE,
+    FOREIGN KEY (template_id) REFERENCES assessment_templates(id) ON DELETE CASCADE,
     FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE CASCADE
 );
 
 CREATE INDEX idx_invitations_partner_id ON invitations(partner_id);
 CREATE INDEX idx_invitations_employee_id ON invitations(employee_id);
 CREATE INDEX idx_invitations_token ON invitations(token);
-
--- ============================================
--- RISK CATEGORIES (Por Snapshot)
--- ============================================
-CREATE TABLE risk_categories (
-    id SERIAL PRIMARY KEY,
-    partner_id BIGINT NOT NULL,
-    snapshot_id BIGINT,
-    category VARCHAR(100) NOT NULL,
-    average_score DECIMAL(5,2) DEFAULT 0,
-    risk_level VARCHAR(50),
-    question_count INT DEFAULT 0,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (partner_id) REFERENCES partners(id) ON DELETE CASCADE
-);
-
-CREATE INDEX idx_risk_categories_partner_id ON risk_categories(partner_id);
-CREATE INDEX idx_risk_categories_snapshot_id ON risk_categories(snapshot_id);
-CREATE INDEX idx_risk_categories_category ON risk_categories(category);
-
--- ============================================
--- ACTION PLAN TEMPLATES
--- ============================================
-CREATE TABLE action_plan_templates (
-    id SERIAL PRIMARY KEY,
-    partner_id BIGINT NOT NULL,
-    category VARCHAR(100),
-    min_risk_level VARCHAR(50),
-    title_template TEXT NOT NULL,
-    description_template TEXT,
-    priority VARCHAR(50),
-    default_due_days INT DEFAULT 30,
-    auto_create BOOLEAN DEFAULT false,
-    active BOOLEAN DEFAULT true,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (partner_id) REFERENCES partners(id) ON DELETE CASCADE
-);
-
-CREATE INDEX idx_action_plan_templates_partner_id ON action_plan_templates(partner_id);
-CREATE INDEX idx_action_plan_templates_category ON action_plan_templates(category);
-
--- ============================================
--- ACTION PLANS
--- ============================================
-CREATE TABLE action_plans (
-    id SERIAL PRIMARY KEY,
-    partner_id BIGINT NOT NULL,
-    company_id BIGINT NOT NULL,
-    department_id BIGINT NOT NULL,
-    snapshot_id BIGINT,
-    title TEXT NOT NULL,
-    description TEXT,
-    priority VARCHAR(50),
-    status VARCHAR(50) DEFAULT 'pending',
-    due_date DATE,
-    completed_at TIMESTAMP,
-    created_by BIGINT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (partner_id) REFERENCES partners(id) ON DELETE CASCADE,
-    FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE,
-    FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE CASCADE,
-    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
-);
-
-CREATE INDEX idx_action_plans_partner_id ON action_plans(partner_id);
-CREATE INDEX idx_action_plans_company_id ON action_plans(company_id);
-CREATE INDEX idx_action_plans_department_id ON action_plans(department_id);
-CREATE INDEX idx_action_plans_status ON action_plans(status);
 
 -- ============================================
 -- CALCULATION FORMULAS (Fórmulas de Cálculo Versionadas)
@@ -433,19 +365,19 @@ CREATE TABLE analytics_reports (
     id SERIAL PRIMARY KEY,
     partner_id BIGINT NOT NULL,
     department_id BIGINT NOT NULL,
-    questionnaire_id BIGINT NOT NULL,
+    template_id BIGINT NOT NULL,
     report_data TEXT, -- JSON com DepartmentAnalytics + CalculationMetadata
     created_by BIGINT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (partner_id) REFERENCES partners(id) ON DELETE CASCADE,
     FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE CASCADE,
-    FOREIGN KEY (questionnaire_id) REFERENCES assessment_templates(id) ON DELETE CASCADE,
+    FOREIGN KEY (template_id) REFERENCES assessment_templates(id) ON DELETE CASCADE,
     FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
 );
 
 CREATE INDEX idx_analytics_reports_partner_id ON analytics_reports(partner_id);
 CREATE INDEX idx_analytics_reports_department_id ON analytics_reports(department_id);
-CREATE INDEX idx_analytics_reports_questionnaire_id ON analytics_reports(questionnaire_id);
+CREATE INDEX idx_analytics_reports_template_id ON analytics_reports(template_id);
 CREATE INDEX idx_analytics_reports_created_at ON analytics_reports(created_at);
 
 -- ============================================
@@ -504,7 +436,7 @@ CREATE TABLE action_plans (
     id SERIAL PRIMARY KEY,
     partner_id BIGINT NOT NULL,
     company_id BIGINT NOT NULL,
-    questionnaire_id BIGINT NOT NULL,
+    template_id BIGINT NOT NULL,
     department_id BIGINT NOT NULL,
     snapshot_id BIGINT,
     title TEXT NOT NULL,

@@ -23,8 +23,8 @@ func (h *AssessmentAssignmentHandler) Create(c *gin.Context) {
 	partnerID := c.GetInt64("partner_id")
 
 	var req struct {
-		TemplateID int64 `json:"template_id" binding:"required"`
-		DepartmentID    int64 `json:"department_id" binding:"required"`
+		TemplateID    int64   `json:"template_id" binding:"required"`
+		DepartmentIDs []int64 `json:"department_ids" binding:"required,min=1"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -32,19 +32,49 @@ func (h *AssessmentAssignmentHandler) Create(c *gin.Context) {
 		return
 	}
 
-	assignment := &domain.AssessmentAssignment{
-		PartnerID:       partnerID,
-		TemplateID: req.TemplateID,
-		DepartmentID:    req.DepartmentID,
-		Active:          true,
+	var successAssignments []*domain.AssessmentAssignment
+	var errors []map[string]interface{}
+
+	for _, departmentID := range req.DepartmentIDs {
+		assignment := &domain.AssessmentAssignment{
+			PartnerID:    partnerID,
+			TemplateID:   req.TemplateID,
+			DepartmentID: departmentID,
+			Active:       true,
+		}
+
+		if err := h.assignmentService.Create(c.Request.Context(), assignment); err != nil {
+			errors = append(errors, map[string]interface{}{
+				"department_id": departmentID,
+				"error":         err.Error(),
+			})
+		} else {
+			successAssignments = append(successAssignments, assignment)
+		}
 	}
 
-	if err := h.assignmentService.Create(c.Request.Context(), assignment); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	// Se todos falharam, retorna erro
+	if len(successAssignments) == 0 {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":  "Failed to create any assignments",
+			"errors": errors,
+		})
 		return
 	}
 
-	c.JSON(http.StatusCreated, assignment)
+	// Se alguns falharam, retorna sucesso parcial
+	if len(errors) > 0 {
+		c.JSON(http.StatusCreated, gin.H{
+			"success": successAssignments,
+			"errors":  errors,
+		})
+		return
+	}
+
+	// Todos criados com sucesso
+	c.JSON(http.StatusCreated, gin.H{
+		"success": successAssignments,
+	})
 }
 
 func (h *AssessmentAssignmentHandler) List(c *gin.Context) {

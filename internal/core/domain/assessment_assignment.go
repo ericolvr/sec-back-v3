@@ -6,18 +6,24 @@ import (
 	"time"
 )
 
+type DepartmentData struct {
+	DepartmentName string `json:"department_name"`
+	CompanyName    string `json:"company_name"`
+}
+
 type AssessmentAssignment struct {
-	ID            int64      `json:"id"`
-	PartnerID     int64      `json:"partner_id"`
-	TemplateID    int64      `json:"template_id"`
-	TemplateName  string     `json:"template_name,omitempty"`
-	DepartmentIDs []int64    `json:"department_ids"`
-	Departments   []string   `json:"departments,omitempty"` // Nomes dos departments (preenchido via JOIN)
-	Active        bool       `json:"active"`
-	StartedAt     time.Time  `json:"started_at"`
-	ClosedAt      *time.Time `json:"closed_at"`
-	CreatedAt     time.Time  `json:"created_at"`
-	UpdatedAt     time.Time  `json:"updated_at"`
+	ID            int64            `json:"id"`
+	PartnerID     int64            `json:"partner_id"`
+	TemplateID    int64            `json:"template_id"`
+	TemplateName  string           `json:"template_name,omitempty"`
+	DepartmentIDs []int64          `json:"department_ids"`
+	Data          []DepartmentData `json:"data,omitempty"`
+	Count         int              `json:"count,omitempty"`
+	Active        bool             `json:"active"`
+	StartedAt     time.Time        `json:"-"` // Não serializar
+	ClosedAt      *time.Time       `json:"-"` // Não serializar
+	CreatedAt     time.Time        `json:"created_at"`
+	UpdatedAt     time.Time        `json:"-"` // Não serializar
 }
 
 type AssessmentAssignmentRepository interface {

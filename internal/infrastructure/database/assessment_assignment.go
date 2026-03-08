@@ -38,23 +38,27 @@ func (r *AssessmentAssignmentRepository) GetByID(ctx context.Context, partnerID,
 			aa.id, aa.partner_id, aa.template_id, aa.department_ids, aa.active, 
 			aa.started_at, aa.closed_at, aa.created_at, aa.updated_at,
 			at.name as template_name,
-			COALESCE(array_agg(d.name ORDER BY d.id) FILTER (WHERE d.id IS NOT NULL), '{}') as department_names
+			COALESCE(array_agg(d.name ORDER BY d.id) FILTER (WHERE d.id IS NOT NULL), '{}') as department_names,
+			COALESCE(array_agg(c.name ORDER BY d.id) FILTER (WHERE c.id IS NOT NULL), '{}') as company_names
 		FROM assessment_assignments aa
 		LEFT JOIN assessment_templates at ON aa.template_id = at.id
 		LEFT JOIN LATERAL unnest(aa.department_ids) dept_id ON true
 		LEFT JOIN departments d ON d.id = dept_id AND d.partner_id = aa.partner_id
+		LEFT JOIN companies c ON d.company_id = c.id
 		WHERE aa.partner_id = $1 AND aa.id = $2
 		GROUP BY aa.id, aa.partner_id, aa.template_id, aa.department_ids, aa.active, 
 			aa.started_at, aa.closed_at, aa.created_at, aa.updated_at, at.name`
 
 	var qa domain.AssessmentAssignment
 	var templateName sql.NullString
+	var departmentNames, companyNames []string
 
 	err := r.db.QueryRowContext(ctx, query, partnerID, id).Scan(
 		&qa.ID, &qa.PartnerID, &qa.TemplateID, pq.Array(&qa.DepartmentIDs), &qa.Active,
 		&qa.StartedAt, &qa.ClosedAt, &qa.CreatedAt, &qa.UpdatedAt,
 		&templateName,
-		pq.Array(&qa.Departments),
+		pq.Array(&departmentNames),
+		pq.Array(&companyNames),
 	)
 
 	if err != nil {
@@ -64,6 +68,16 @@ func (r *AssessmentAssignmentRepository) GetByID(ctx context.Context, partnerID,
 	if templateName.Valid {
 		qa.TemplateName = templateName.String
 	}
+
+	// Montar estrutura Data
+	qa.Data = make([]domain.DepartmentData, 0, len(departmentNames))
+	for i := 0; i < len(departmentNames) && i < len(companyNames); i++ {
+		qa.Data = append(qa.Data, domain.DepartmentData{
+			DepartmentName: departmentNames[i],
+			CompanyName:    companyNames[i],
+		})
+	}
+	qa.Count = len(qa.Data)
 
 	return &qa, nil
 }
@@ -93,11 +107,13 @@ func (r *AssessmentAssignmentRepository) List(ctx context.Context, partnerID, li
 			aa.id, aa.partner_id, aa.template_id, aa.department_ids, aa.active, 
 			aa.started_at, aa.closed_at, aa.created_at, aa.updated_at,
 			at.name as template_name,
-			COALESCE(array_agg(d.name ORDER BY d.id) FILTER (WHERE d.id IS NOT NULL), '{}') as department_names
+			COALESCE(array_agg(d.name ORDER BY d.id) FILTER (WHERE d.id IS NOT NULL), '{}') as department_names,
+			COALESCE(array_agg(c.name ORDER BY d.id) FILTER (WHERE c.id IS NOT NULL), '{}') as company_names
 		FROM assessment_assignments aa
 		LEFT JOIN assessment_templates at ON aa.template_id = at.id
 		LEFT JOIN LATERAL unnest(aa.department_ids) dept_id ON true
 		LEFT JOIN departments d ON d.id = dept_id AND d.partner_id = aa.partner_id
+		LEFT JOIN companies c ON d.company_id = c.id
 		WHERE aa.partner_id = $1
 		GROUP BY aa.id, aa.partner_id, aa.template_id, aa.department_ids, aa.active, 
 			aa.started_at, aa.closed_at, aa.created_at, aa.updated_at, at.name
@@ -218,45 +234,20 @@ func (r *AssessmentAssignmentRepository) scanAssignments(rows *sql.Rows) ([]*dom
 	return assignments, rows.Err()
 }
 
-func (r *AssessmentAssignmentRepository) scanAssignmentsWithTemplate(rows *sql.Rows) ([]*domain.AssessmentAssignment, error) {
-	var assignments []*domain.AssessmentAssignment
-
-	for rows.Next() {
-		var qa domain.AssessmentAssignment
-		var templateName sql.NullString
-
-		err := rows.Scan(
-			&qa.ID, &qa.PartnerID, &qa.TemplateID, pq.Array(&qa.DepartmentIDs), &qa.Active,
-			&qa.StartedAt, &qa.ClosedAt, &qa.CreatedAt, &qa.UpdatedAt,
-			&templateName,
-		)
-
-		if err != nil {
-			return nil, err
-		}
-
-		if templateName.Valid {
-			qa.TemplateName = templateName.String
-		}
-
-		assignments = append(assignments, &qa)
-	}
-
-	return assignments, rows.Err()
-}
-
 func (r *AssessmentAssignmentRepository) scanAssignmentsWithDetails(rows *sql.Rows) ([]*domain.AssessmentAssignment, error) {
 	var assignments []*domain.AssessmentAssignment
 
 	for rows.Next() {
 		var qa domain.AssessmentAssignment
 		var templateName sql.NullString
+		var departmentNames, companyNames []string
 
 		err := rows.Scan(
 			&qa.ID, &qa.PartnerID, &qa.TemplateID, pq.Array(&qa.DepartmentIDs), &qa.Active,
 			&qa.StartedAt, &qa.ClosedAt, &qa.CreatedAt, &qa.UpdatedAt,
 			&templateName,
-			pq.Array(&qa.Departments),
+			pq.Array(&departmentNames),
+			pq.Array(&companyNames),
 		)
 
 		if err != nil {
@@ -266,6 +257,16 @@ func (r *AssessmentAssignmentRepository) scanAssignmentsWithDetails(rows *sql.Ro
 		if templateName.Valid {
 			qa.TemplateName = templateName.String
 		}
+
+		// Montar estrutura Data com department_name e company_name
+		qa.Data = make([]domain.DepartmentData, 0, len(departmentNames))
+		for i := 0; i < len(departmentNames) && i < len(companyNames); i++ {
+			qa.Data = append(qa.Data, domain.DepartmentData{
+				DepartmentName: departmentNames[i],
+				CompanyName:    companyNames[i],
+			})
+		}
+		qa.Count = len(qa.Data)
 
 		assignments = append(assignments, &qa)
 	}

@@ -115,8 +115,8 @@ func (s *AnalyticsService) GetDepartmentReport(ctx context.Context, partnerID, c
 	analytics := &domain.DepartmentAnalytics{
 		DepartmentID:         departmentID,
 		DepartmentName:       department.Name,
-		TemplateID:      templateID,
-		TemplateName:    template.Name,
+		TemplateID:           templateID,
+		TemplateName:         template.Name,
 		TotalEmployees:       int64(metrics.TotalEmployees),
 		TotalSubmissions:     int64(metrics.TotalSubmissions),
 		CompletedSubmissions: int64(metrics.CompletedSubmissions),
@@ -223,8 +223,8 @@ func (s *AnalyticsService) GetCompanyReport(ctx context.Context, partnerID, comp
 	return &domain.CompanyAnalytics{
 		CompanyID:           companyID,
 		CompanyName:         company.Name,
-		TemplateID:     templateID,
-		TemplateName:   template.Name,
+		TemplateID:          templateID,
+		TemplateName:        template.Name,
 		TotalDepartments:    len(departmentSummaries),
 		OverallResponseRate: overallResponseRate,
 		OverallRiskLevel:    overallRiskLevel,
@@ -291,13 +291,13 @@ func (s *AnalyticsService) GetPartnerReport(ctx context.Context, partnerID int64
 		}
 
 		summary := &domain.CompanySummary{
-			CompanyID:            company.ID,
-			CompanyName:          company.Name,
-			TotalDepartments:     len(departments),
-			ResponseRate:         companyResponseRate,
-			RiskLevel:            companyRiskLevel,
-			DepartmentsAtRisk:    departmentsAtRisk,
-			ActiveTemplates: activeQuestionnaires,
+			CompanyID:         company.ID,
+			CompanyName:       company.Name,
+			TotalDepartments:  len(departments),
+			ResponseRate:      companyResponseRate,
+			RiskLevel:         companyRiskLevel,
+			DepartmentsAtRisk: departmentsAtRisk,
+			ActiveTemplates:   activeQuestionnaires,
 		}
 
 		companySummaries = append(companySummaries, summary)
@@ -312,105 +312,252 @@ func (s *AnalyticsService) GetPartnerReport(ctx context.Context, partnerID int64
 	}
 
 	return &domain.PartnerAnalytics{
-		PartnerID:                 partnerID,
-		PartnerName:               partner.Name,
-		TotalCompanies:            len(companySummaries),
+		PartnerID:            partnerID,
+		PartnerName:          partner.Name,
+		TotalCompanies:       len(companySummaries),
 		TotalActiveTemplates: totalActiveTemplates,
-		OverallResponseRate:       overallResponseRate,
-		CompaniesAtRisk:           companiesAtRisk,
-		Companies:                 companySummaries,
+		OverallResponseRate:  overallResponseRate,
+		CompaniesAtRisk:      companiesAtRisk,
+		Companies:            companySummaries,
 	}, nil
 }
 
 // GetInProgressTemplates retorna todos os templates em andamento de uma empresa
 func (s *AnalyticsService) GetInProgressTemplates(ctx context.Context, partnerID, companyID int64) ([]*domain.TemplateInProgress, error) {
-	// 1. Buscar todos os departamentos da empresa
-	departments, err := s.departmentRepo.ListByCompany(ctx, partnerID, companyID, 1000, 0)
+	// 1. Buscar assignments ativos
+	assignments, err := s.assignmentRepo.List(ctx, partnerID, 1000, 0)
 	if err != nil {
 		return nil, err
 	}
-
-	// 2. Mapear templates ativos (agrupados por template_id)
-	questionnaireMap := make(map[int64]*domain.TemplateInProgress)
 
 	settings, _ := s.settingsRepo.GetByPartnerID(ctx, partnerID)
 	if settings == nil {
 		settings = domain.DefaultPartnerSettings(partnerID)
 	}
 
-	for _, dept := range departments {
-		// Buscar métricas do departamento (assumindo que temos métricas para templates ativos)
-		// TODO: Melhorar para buscar apenas templates com assignments ativos
-		metrics, err := s.riskMetricsService.List(ctx, partnerID, 100, 0)
+	// 2. Mapear templates ativos (agrupados por template_id)
+	templateMap := make(map[int64]*domain.TemplateInProgress)
+
+	for _, assignment := range assignments {
+		if !assignment.Active {
+			continue // Pular assignments encerrados
+		}
+
+		// Buscar template
+		template, err := s.templateRepo.GetByID(ctx, partnerID, assignment.TemplateID)
 		if err != nil {
 			continue
 		}
 
-		for _, metric := range metrics {
-			if metric.DepartmentID != dept.ID {
+		// Verificar se já temos esse template no mapa
+		qip, exists := templateMap[assignment.TemplateID]
+		if !exists {
+			qip = &domain.TemplateInProgress{
+				ID:                        assignment.TemplateID,
+				Name:                      template.Name,
+				Description:               template.Description,
+				Status:                    "active",
+				CreatedAt:                 assignment.CreatedAt.Format(time.RFC3339),
+				Departments:               []*domain.DepartmentStatus{},
+				DepartmentsCompleted:      0,
+				DepartmentsInProgress:     0,
+				DepartmentsNotStarted:     0,
+				TotalEmployees:            0,
+				TotalInvitations:          0,
+				CompletedResponses:        0,
+				DepartmentsWithHighRisk:   0,
+				DepartmentsWithMediumRisk: 0,
+				DepartmentsWithLowRisk:    0,
+				AverageScore:              0,
+				LastUpdated:               time.Now().Format(time.RFC3339),
+			}
+			templateMap[assignment.TemplateID] = qip
+		}
+
+		// Para cada departamento do assignment
+		for _, deptID := range assignment.DepartmentIDs {
+			// Buscar department
+			dept, err := s.departmentRepo.GetByID(ctx, partnerID, deptID)
+			if err != nil {
 				continue
 			}
 
-			// Verificar se já temos esse template no mapa
-			qip, exists := questionnaireMap[metric.TemplateID]
-			if !exists {
-				// Buscar template para pegar o nome
-				template, err := s.templateRepo.GetByID(ctx, partnerID, metric.TemplateID)
+			// Buscar métricas do departamento
+			metrics, err := s.riskMetricsService.GetByDepartment(ctx, partnerID, deptID, assignment.TemplateID)
+			if err != nil {
+				// Métricas não existem - tentar calcular agora
+				// Buscar company_id do departamento
+				companyID := dept.CompanyID
+
+				// Tentar calcular e armazenar métricas
+				metrics, err = s.riskMetricsService.CalculateAndStore(ctx, partnerID, companyID, deptID, assignment.TemplateID)
 				if err != nil {
+					// Realmente não há dados - departamento não iniciado
+					deptStatus := &domain.DepartmentStatus{
+						DepartmentID:       deptID,
+						DepartmentName:     dept.Name,
+						TotalEmployees:     0,
+						CompletedResponses: 0,
+						PendingResponses:   0,
+						ResponseRate:       0,
+						CanCalculateRisk:   false,
+						Reliability:        "insufficient",
+						AverageScore:       0,
+						RiskLevel:          "unknown",
+						Status:             "not_started",
+						IsActive:           true,
+						CanClose:           false,
+						CanCloseReason:     "Nenhuma resposta ainda",
+					}
+					qip.Departments = append(qip.Departments, deptStatus)
+					qip.DepartmentsNotStarted++
 					continue
 				}
-
-				qip = &domain.TemplateInProgress{
-					TemplateID:   metric.TemplateID,
-					TemplateName: template.Name,
-					Departments:       []*domain.DepartmentStatus{},
-				}
-				questionnaireMap[metric.TemplateID] = qip
 			}
 
-			// Adicionar status do departamento
-			canClose := metric.ResponseRate >= settings.MinResponseRateToClose && metric.CanCalculateRisk
-			canCloseReason := ""
-			if !canClose {
-				if metric.ResponseRate < settings.MinResponseRateToClose {
-					canCloseReason = "Taxa de resposta insuficiente"
+			// Determinar status do departamento
+			status := "not_started"
+			if metrics.CompletedSubmissions > 0 {
+				if metrics.CompletedSubmissions >= metrics.TotalSubmissions {
+					status = "completed"
+					qip.DepartmentsCompleted++
 				} else {
-					canCloseReason = "Dados insuficientes"
+					status = "in_progress"
+					qip.DepartmentsInProgress++
 				}
 			} else {
-				canCloseReason = "Critérios atingidos - pode fechar"
+				qip.DepartmentsNotStarted++
 			}
 
+			// Determinar se pode fechar
+			canClose := metrics.ResponseRate >= settings.MinResponseRateToClose && metrics.CanCalculateRisk
+			canCloseReason := ""
+			if !canClose {
+				if metrics.ResponseRate < settings.MinResponseRateToClose {
+					canCloseReason = fmt.Sprintf("Taxa de resposta abaixo de %.0f%% (atual: %.0f%%)", settings.MinResponseRateToClose, metrics.ResponseRate)
+				} else {
+					canCloseReason = "Dados insuficientes para cálculo confiável"
+				}
+			} else {
+				canCloseReason = "Critérios atingidos - pode fechar a coleta"
+			}
+
+			// Criar status do departamento
 			deptStatus := &domain.DepartmentStatus{
-				DepartmentID:   dept.ID,
-				DepartmentName: dept.Name,
-				TotalEmployees: int64(metric.TotalEmployees),
-				ResponseRate:   metric.ResponseRate,
-				RiskLevel:      metric.RiskLevel,
-				CanClose:       canClose,
-				CanCloseReason: canCloseReason,
+				DepartmentID:       deptID,
+				DepartmentName:     dept.Name,
+				TotalEmployees:     int64(metrics.TotalEmployees),
+				CompletedResponses: int64(metrics.CompletedSubmissions),
+				PendingResponses:   int64(metrics.TotalEmployees - metrics.CompletedSubmissions),
+				ResponseRate:       metrics.ResponseRate,
+				CanCalculateRisk:   metrics.CanCalculateRisk,
+				Reliability:        metrics.Reliability,
+				AverageScore:       metrics.AverageScore,
+				RiskLevel:          metrics.RiskLevel,
+				Status:             status,
+				IsActive:           true,
+				CanClose:           canClose,
+				CanCloseReason:     canCloseReason,
 			}
 
 			qip.Departments = append(qip.Departments, deptStatus)
-			qip.TotalDepartments++
-			qip.ResponseRate += metric.ResponseRate
 
-			if metric.RiskLevel == "high" {
-				qip.DepartmentsAtRisk++
+			// Acumular métricas gerais
+			qip.TotalEmployees += metrics.TotalEmployees
+			qip.TotalInvitations += metrics.TotalSubmissions
+			qip.CompletedResponses += metrics.CompletedSubmissions
+			qip.AverageScore += metrics.AverageScore
+
+			// Contar departamentos por nível de risco
+			switch metrics.RiskLevel {
+			case "high":
+				qip.DepartmentsWithHighRisk++
+			case "medium":
+				qip.DepartmentsWithMediumRisk++
+			case "low":
+				qip.DepartmentsWithLowRisk++
 			}
 		}
 	}
 
 	// 3. Calcular médias e determinar risco geral de cada template
 	var result []*domain.TemplateInProgress
-	for _, qip := range questionnaireMap {
+	for _, qip := range templateMap {
+		qip.TotalDepartments = len(qip.Departments)
+
 		if qip.TotalDepartments > 0 {
-			qip.ResponseRate = qip.ResponseRate / float64(qip.TotalDepartments)
+			qip.AverageScore = qip.AverageScore / float64(qip.TotalDepartments)
 
 			// Determinar risco geral
-			if qip.DepartmentsAtRisk > qip.TotalDepartments/2 {
+			if qip.DepartmentsWithHighRisk > qip.TotalDepartments/2 {
 				qip.OverallRiskLevel = "high"
-			} else if qip.DepartmentsAtRisk > 0 {
+			} else if qip.DepartmentsWithHighRisk > 0 || qip.DepartmentsWithMediumRisk > qip.TotalDepartments/2 {
+				qip.OverallRiskLevel = "medium"
+			} else {
+				qip.OverallRiskLevel = "low"
+			}
+		}
+		result = append(result, qip)
+	}
+
+	return result, nil
+}
+
+// GetAllInProgressTemplates retorna todos os templates em andamento de todas as companies do partner
+func (s *AnalyticsService) GetAllInProgressTemplates(ctx context.Context, partnerID int64) ([]*domain.TemplateInProgress, error) {
+	// 1. Buscar todas as companies do partner
+	companies, err := s.companyRepo.List(ctx, partnerID, 1000, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	// 2. Mapear templates ativos de todas as companies (agrupados por template_id)
+	templateMap := make(map[int64]*domain.TemplateInProgress)
+
+	for _, company := range companies {
+		// Buscar templates em andamento da company
+		templates, err := s.GetInProgressTemplates(ctx, partnerID, company.ID)
+		if err != nil {
+			continue
+		}
+
+		// Agregar templates
+		for _, template := range templates {
+			existing, exists := templateMap[template.ID]
+			if !exists {
+				templateMap[template.ID] = template
+			} else {
+				// Agregar métricas de múltiplas companies
+				existing.TotalDepartments += template.TotalDepartments
+				existing.DepartmentsCompleted += template.DepartmentsCompleted
+				existing.DepartmentsInProgress += template.DepartmentsInProgress
+				existing.DepartmentsNotStarted += template.DepartmentsNotStarted
+				existing.TotalEmployees += template.TotalEmployees
+				existing.TotalInvitations += template.TotalInvitations
+				existing.CompletedResponses += template.CompletedResponses
+				existing.DepartmentsWithHighRisk += template.DepartmentsWithHighRisk
+				existing.DepartmentsWithMediumRisk += template.DepartmentsWithMediumRisk
+				existing.DepartmentsWithLowRisk += template.DepartmentsWithLowRisk
+				existing.Departments = append(existing.Departments, template.Departments...)
+			}
+		}
+	}
+
+	// 3. Recalcular médias e risco geral
+	var result []*domain.TemplateInProgress
+	for _, qip := range templateMap {
+		if qip.TotalDepartments > 0 {
+			// Recalcular average score
+			totalScore := 0.0
+			for _, dept := range qip.Departments {
+				totalScore += dept.AverageScore
+			}
+			qip.AverageScore = totalScore / float64(len(qip.Departments))
+
+			// Determinar risco geral
+			if qip.DepartmentsWithHighRisk > qip.TotalDepartments/2 {
+				qip.OverallRiskLevel = "high"
+			} else if qip.DepartmentsWithHighRisk > 0 || qip.DepartmentsWithMediumRisk > qip.TotalDepartments/2 {
 				qip.OverallRiskLevel = "medium"
 			} else {
 				qip.OverallRiskLevel = "low"
@@ -539,10 +686,10 @@ func (s *AnalyticsService) CreateSnapshot(ctx context.Context, partnerID, compan
 
 	// 5. Criar snapshot
 	report := &domain.AnalyticsReport{
-		PartnerID:       partnerID,
-		DepartmentID:    departmentID,
-		TemplateID: templateID,
-		CreatedBy:       createdBy,
+		PartnerID:    partnerID,
+		DepartmentID: departmentID,
+		TemplateID:   templateID,
+		CreatedBy:    createdBy,
 	}
 
 	// 6. Serializar analytics + metadados para JSON
@@ -660,7 +807,7 @@ func (s *AnalyticsService) buildActionPlanFromTemplate(
 	return &domain.ActionPlan{
 		PartnerID:       partnerID,
 		CompanyID:       companyID,
-		TemplateID: templateID,
+		TemplateID:      templateID,
 		DepartmentID:    departmentID,
 		SnapshotID:      &snapshotID,
 		Title:           title,
@@ -692,4 +839,88 @@ func (s *AnalyticsService) replaceTemplateVariables(template string, riskCat *do
 	result = strings.ReplaceAll(result, "{risk_level}", riskCat.RiskLevel)
 
 	return result
+}
+
+// GetClosedDepartmentSnapshots retorna todos os snapshots de departamentos encerrados
+func (s *AnalyticsService) GetClosedDepartmentSnapshots(ctx context.Context, partnerID int64) ([]*domain.DepartmentSnapshot, error) {
+	// 1. Buscar todos os assignments encerrados (active=false)
+	assignments, err := s.assignmentRepo.List(ctx, partnerID, 1000, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	var snapshots []*domain.DepartmentSnapshot
+
+	// 2. Para cada assignment encerrado, buscar métricas
+	for _, assignment := range assignments {
+		if assignment.Active {
+			continue // Pular assignments ainda ativos
+		}
+
+		// Para cada departamento do assignment
+		for _, deptID := range assignment.DepartmentIDs {
+			// Buscar department para nome
+			department, err := s.departmentRepo.GetByID(ctx, partnerID, deptID)
+			if err != nil {
+				continue
+			}
+
+			// Buscar template para nome
+			template, err := s.templateRepo.GetByID(ctx, partnerID, assignment.TemplateID)
+			if err != nil {
+				continue
+			}
+
+			// Buscar métricas do departamento
+			metrics, err := s.riskMetricsService.GetByDepartment(ctx, partnerID, deptID, assignment.TemplateID)
+			if err != nil {
+				continue // Departamento sem métricas
+			}
+
+			// Buscar total de funcionários do departamento
+			employees, err := s.submissionRepo.ListByDepartment(ctx, partnerID, deptID, 10000, 0)
+			if err != nil {
+				continue
+			}
+
+			// Filtrar submissions deste template
+			var templateSubmissions []*domain.EmployeeSubmission
+			completedCount := 0
+			for _, sub := range employees {
+				if sub.TemplateID == assignment.TemplateID {
+					templateSubmissions = append(templateSubmissions, sub)
+					if sub.Status == "completed" {
+						completedCount++
+					}
+				}
+			}
+
+			// Calcular taxa de resposta
+			responseRate := 0.0
+			if len(templateSubmissions) > 0 {
+				responseRate = (float64(completedCount) / float64(len(templateSubmissions))) * 100
+			}
+
+			// Criar snapshot
+			snapshot := &domain.DepartmentSnapshot{
+				SnapshotID:         assignment.ID, // Usando assignment ID como snapshot ID
+				TemplateID:         assignment.TemplateID,
+				TemplateName:       template.Name,
+				DepartmentID:       deptID,
+				DepartmentName:     department.Name,
+				ClosedAt:           assignment.ClosedAt,
+				TotalEmployees:     int64(len(templateSubmissions)),
+				CompletedResponses: int64(completedCount),
+				ResponseRate:       responseRate,
+				Reliability:        metrics.Reliability,
+				AverageScore:       metrics.AverageScore,
+				RiskLevel:          metrics.RiskLevel,
+				CanCalculateRisk:   metrics.CanCalculateRisk,
+			}
+
+			snapshots = append(snapshots, snapshot)
+		}
+	}
+
+	return snapshots, nil
 }

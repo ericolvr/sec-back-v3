@@ -33,4 +33,12 @@ func (r *AnalyticsRoutes) SetupRoutes(v1 *gin.RouterGroup) {
 		analytics.GET("/snapshots/:id", r.analyticsHandler.GetSnapshot)
 		analytics.GET("/snapshots/:id/risk-categories", r.analyticsHandler.GetRiskCategoriesBySnapshot)
 	}
+
+	// Statistics endpoints (compatibilidade com frontend)
+	statistics := v1.Group("/statistics")
+	statistics.Use(middleware.PartnerMiddleware())
+	{
+		statistics.GET("/questionnaires/in-progress", r.analyticsHandler.GetInProgressQuestionnaires)
+		statistics.GET("/questionnaires/closed/risk-overview", r.analyticsHandler.GetClosedDepartmentSnapshots)
+	}
 }

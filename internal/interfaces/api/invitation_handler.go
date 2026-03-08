@@ -295,23 +295,15 @@ func (h *InvitationHandler) SendAllInvitations(c *gin.Context) {
 				continue
 			}
 
-			// Buscar o EmployeeSubmission para pegar o token
-			submission, err := h.submissionService.GetByID(ctx, partnerID, inv.ResponseID)
-			if err != nil {
-				failedCount++
-				fmt.Printf("   ❌ Erro ao buscar submission para %s\n", inv.EmployeeEmail)
-				h.invitationService.MarkAsFailed(ctx, partnerID, inv.ID)
-				continue
-			}
-
-			surveyURL := fmt.Sprintf("%s/survey?token=%s", frontendURL, submission.InvitationToken)
+			// Usar o token diretamente da invitation
+			surveyURL := fmt.Sprintf("%s/survey?token=%s", frontendURL, inv.Token)
 
 			// Enviar email
 			fmt.Printf("   📧 Enviando para %s...\n", inv.EmployeeEmail)
-			err = h.emailService.SendInvitation(
+			err := h.emailService.SendInvitation(
 				inv.EmployeeEmail,
 				assignment.TemplateName,
-				submission.InvitationToken,
+				inv.Token,
 				surveyURL,
 			)
 

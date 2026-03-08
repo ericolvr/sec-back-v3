@@ -15,12 +15,15 @@ const (
 type Invitation struct {
 	ID            int64      `json:"id"`
 	PartnerID     int64      `json:"partner_id"`
+	EmployeeID    int64      `json:"employee_id"` // Adicionado para compatibilidade com banco
 	TemplateID    int64      `json:"template_id"`
 	TemplateName  string     `json:"template_name,omitempty"`
 	DepartmentID  int64      `json:"department_id"`
-	ResponseID    int64      `json:"response_id"`
+	ResponseID    int64      `json:"response_id"` // Mantido para compatibilidade
+	Token         string     `json:"token"`       // Adicionado para compatibilidade com banco
 	EmployeeEmail string     `json:"employee_email"`
 	Status        string     `json:"status"`
+	Sent          bool       `json:"sent"`
 	SentAt        *time.Time `json:"sent_at"`
 	CreatedAt     time.Time  `json:"created_at"`
 	UpdatedAt     time.Time  `json:"updated_at"`
@@ -42,6 +45,10 @@ func (i *Invitation) ValidateInvitation() error {
 		return fmt.Errorf("partner_id is required")
 	}
 
+	if i.EmployeeID <= 0 && i.ResponseID <= 0 {
+		return fmt.Errorf("employee_id or response_id is required")
+	}
+
 	if i.TemplateID <= 0 {
 		return fmt.Errorf("template_id is required")
 	}
@@ -50,16 +57,8 @@ func (i *Invitation) ValidateInvitation() error {
 		return fmt.Errorf("department_id is required")
 	}
 
-	if i.ResponseID <= 0 {
-		return fmt.Errorf("response_id is required")
-	}
-
-	if i.EmployeeEmail == "" {
-		return fmt.Errorf("employee_email is required")
-	}
-
-	if i.Status == "" {
-		return fmt.Errorf("status is required")
+	if i.Token == "" {
+		return fmt.Errorf("token is required")
 	}
 
 	return nil

@@ -54,7 +54,7 @@ func (s *DashboardService) GetCompanyDashboard(ctx context.Context, partnerID, c
 	// 4. Contar employees e departments
 	departments, _ := s.departmentRepo.ListByCompany(ctx, partnerID, companyID, 1000, 0)
 	employees, _ := s.employeeRepo.List(ctx, partnerID, 10000, 0)
-	
+
 	totalEmployees := 0
 	for _, emp := range employees {
 		if emp.CompanyID == companyID && emp.Active {
@@ -126,7 +126,7 @@ func (s *DashboardService) GetPartnerDashboard(ctx context.Context, partnerID in
 	for _, company := range companies {
 		// Buscar templates em andamento da empresa
 		questionnaires, _ := s.analyticsService.GetInProgressTemplates(ctx, partnerID, company.ID)
-		
+
 		// Buscar departamentos
 		departments, _ := s.departmentRepo.ListByCompany(ctx, partnerID, company.ID, 1000, 0)
 
@@ -135,14 +135,19 @@ func (s *DashboardService) GetPartnerDashboard(ctx context.Context, partnerID in
 		departmentsAtRisk := 0
 
 		for _, q := range questionnaires {
-			companyResponseRate += q.ResponseRate
-			totalActiveTemplates++
-			
-			for _, dept := range q.Departments {
-				if dept.RiskLevel == "high" {
-					departmentsAtRisk++
+			// Calcular response rate a partir dos departamentos
+			totalDepts := len(q.Departments)
+			if totalDepts > 0 {
+				deptResponseSum := 0.0
+				for _, dept := range q.Departments {
+					deptResponseSum += dept.ResponseRate
+					if dept.RiskLevel == "high" {
+						departmentsAtRisk++
+					}
 				}
+				companyResponseRate += deptResponseSum / float64(totalDepts)
 			}
+			totalActiveTemplates++
 		}
 
 		if len(questionnaires) > 0 {
@@ -158,13 +163,13 @@ func (s *DashboardService) GetPartnerDashboard(ctx context.Context, partnerID in
 		}
 
 		companiesSummary = append(companiesSummary, &domain.CompanyStatus{
-			CompanyID:            company.ID,
-			CompanyName:          company.Name,
-			ActiveTemplates: len(questionnaires),
-			ResponseRate:         companyResponseRate,
-			RiskLevel:            companyRiskLevel,
-			DepartmentsAtRisk:    departmentsAtRisk,
-			TotalDepartments:     len(departments),
+			CompanyID:         company.ID,
+			CompanyName:       company.Name,
+			ActiveTemplates:   len(questionnaires),
+			ResponseRate:      companyResponseRate,
+			RiskLevel:         companyRiskLevel,
+			DepartmentsAtRisk: departmentsAtRisk,
+			TotalDepartments:  len(departments),
 		})
 
 		totalResponseRate += companyResponseRate
@@ -176,14 +181,14 @@ func (s *DashboardService) GetPartnerDashboard(ctx context.Context, partnerID in
 	}
 
 	return &domain.PartnerDashboard{
-		PartnerID:                 partnerID,
-		PartnerName:               partner.Name,
-		CompaniesSummary:          companiesSummary,
-		TotalCompanies:            len(companies),
+		PartnerID:            partnerID,
+		PartnerName:          partner.Name,
+		CompaniesSummary:     companiesSummary,
+		TotalCompanies:       len(companies),
 		TotalActiveTemplates: totalActiveTemplates,
-		CompaniesAtRisk:           companiesAtRisk,
-		OverallResponseRate:       overallResponseRate,
-		Alerts:                    alerts,
+		CompaniesAtRisk:      companiesAtRisk,
+		OverallResponseRate:  overallResponseRate,
+		Alerts:               alerts,
 	}, nil
 }
 
@@ -222,14 +227,14 @@ func (s *DashboardService) GetDepartmentDashboard(ctx context.Context, partnerID
 	}
 
 	return &domain.DepartmentDashboard{
-		DepartmentID:         departmentID,
-		DepartmentName:       department.Name,
-		CompanyID:            companyID,
-		CompanyName:          company.Name,
-		ActiveTemplates: activeQuestionnaires,
-		EmployeesSummary:     employeesSummary,
-		ActionPlans:          []*domain.ActionPlanSummary{}, // TODO: Implementar
-		RiskCategories:       []*domain.RiskCategorySummary{}, // TODO: Implementar
-		Alerts:               alerts,
+		DepartmentID:     departmentID,
+		DepartmentName:   department.Name,
+		CompanyID:        companyID,
+		CompanyName:      company.Name,
+		ActiveTemplates:  activeQuestionnaires,
+		EmployeesSummary: employeesSummary,
+		ActionPlans:      []*domain.ActionPlanSummary{},   // TODO: Implementar
+		RiskCategories:   []*domain.RiskCategorySummary{}, // TODO: Implementar
+		Alerts:           alerts,
 	}, nil
 }

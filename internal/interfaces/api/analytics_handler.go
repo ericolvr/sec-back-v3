@@ -22,25 +22,40 @@ func NewAnalyticsHandler(analyticsService *services.AnalyticsService) *Analytics
 func (h *AnalyticsHandler) CreateSnapshot(c *gin.Context) {
 	partnerID := c.GetInt64("partner_id")
 
-	var req struct {
-		CompanyID       int64  `json:"company_id" binding:"required"`
-		DepartmentID    int64  `json:"department_id" binding:"required"`
-		TemplateID int64  `json:"template_id" binding:"required"`
-		CreatedBy       *int64 `json:"created_by"`
-	}
-
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	// Buscar department_id da URL
+	departmentID, err := strconv.ParseInt(c.Param("department_id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid department_id"})
 		return
 	}
+
+	// Buscar template_id do query parameter (compatibilidade com frontend)
+	templateIDStr := c.Query("questionnaire_id")
+	if templateIDStr == "" {
+		templateIDStr = c.Query("template_id")
+	}
+	if templateIDStr == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "questionnaire_id or template_id is required"})
+		return
+	}
+
+	templateID, err := strconv.ParseInt(templateIDStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid template_id"})
+		return
+	}
+
+	// Buscar company_id do departamento
+	// TODO: implementar busca real do company_id
+	companyID := int64(1)
 
 	snapshot, err := h.analyticsService.CreateSnapshot(
 		c.Request.Context(),
 		partnerID,
-		req.CompanyID,
-		req.DepartmentID,
-		req.TemplateID,
-		req.CreatedBy,
+		companyID,
+		departmentID,
+		templateID,
+		nil, // created_by
 	)
 
 	if err != nil {
@@ -185,10 +200,10 @@ func (h *AnalyticsHandler) GetTemplateReport(c *gin.Context) {
 
 	// TODO: Implementar GetTemplateReport no service
 	c.JSON(http.StatusNotImplemented, gin.H{
-		"error":            "Not implemented yet",
-		"partner_id":       partnerID,
+		"error":       "Not implemented yet",
+		"partner_id":  partnerID,
 		"template_id": qID,
-		"message":          "This endpoint will return analytics for all departments of a questionnaire",
+		"message":     "This endpoint will return analytics for all departments of a questionnaire",
 	})
 }
 
@@ -209,4 +224,36 @@ func (h *AnalyticsHandler) GetRiskCategoriesBySnapshot(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, categories)
+}
+
+// GetClosedDepartmentSnapshots retorna todos os snapshots de departamentos encerrados
+func (h *AnalyticsHandler) GetClosedDepartmentSnapshots(c *gin.Context) {
+	partnerID := c.GetInt64("partner_id")
+
+	snapshots, err := h.analyticsService.GetClosedDepartmentSnapshots(c.Request.Context(), partnerID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, snapshots)
+}
+
+// GetInProgressQuestionnaires retorna todos os questionários em andamento
+func (h *AnalyticsHandler) GetInProgressQuestionnaires(c *gin.Context) {
+	partnerID := c.GetInt64("partner_id")
+
+	// TODO: Buscar company_id do usuário logado
+	// Por enquanto usa company_id = 1
+	companyID := int64(1)
+
+	questionnaires, err := h.analyticsService.GetInProgressTemplates(c.Request.Context(), partnerID, companyID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"questionnaires": questionnaires,
+	})
 }

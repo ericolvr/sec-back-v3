@@ -44,7 +44,15 @@ func (h *AssessmentAssignmentHandler) Create(c *gin.Context) {
 
 	submissionsCount, err := h.assignmentService.Create(c.Request.Context(), assignment)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		// Log detalhado para debug
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": err.Error(),
+			"details": map[string]interface{}{
+				"partner_id":     partnerID,
+				"template_id":    req.TemplateID,
+				"department_ids": req.DepartmentIDs,
+			},
+		})
 		return
 	}
 

@@ -37,7 +37,7 @@ func NewAssessmentAssignmentService(
 
 func (s *AssessmentAssignmentService) Create(ctx context.Context, assignment *domain.AssessmentAssignment) (int, error) {
 	if err := assignment.Validate(); err != nil {
-		return 0, err
+		return 0, fmt.Errorf("validation error: %w", err)
 	}
 
 	// Validar que todos os departments existem
@@ -45,15 +45,15 @@ func (s *AssessmentAssignmentService) Create(ctx context.Context, assignment *do
 		_, err := s.departmentRepo.GetByID(ctx, assignment.PartnerID, deptID)
 		if err != nil {
 			if err == sql.ErrNoRows {
-				return 0, errors.New("department not found")
+				return 0, fmt.Errorf("department %d not found", deptID)
 			}
-			return 0, err
+			return 0, fmt.Errorf("error fetching department %d: %w", deptID, err)
 		}
 	}
 
 	// Criar o Assignment
 	if err := s.assignmentRepo.Create(ctx, assignment); err != nil {
-		return 0, err
+		return 0, fmt.Errorf("error creating assignment in database: %w", err)
 	}
 
 	// Criar EmployeeSubmissions e Invitations para cada department
@@ -146,11 +146,14 @@ func (s *AssessmentAssignmentService) createSubmissionsForDepartment(ctx context
 	// Buscar todos os employees do department
 	employees, err := s.employeeRepo.ListByDepartment(ctx, assignment.PartnerID, departmentID, 1000, 0)
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("error listing employees: %w", err)
 	}
 
+	fmt.Printf("DEBUG: Found %d employees for department %d\n", len(employees), departmentID)
+
 	count := 0
-	for _, employee := range employees {
+	for i, employee := range employees {
+		fmt.Printf("DEBUG: Processing employee %d/%d - ID: %d, Name: %s\n", i+1, len(employees), employee.ID, employee.Name)
 		// Criar EmployeeSubmission
 		submission := &domain.EmployeeSubmission{
 			PartnerID:       assignment.PartnerID,
@@ -171,11 +174,14 @@ func (s *AssessmentAssignmentService) createSubmissionsForDepartment(ctx context
 		// Criar Invitation vinculada ao EmployeeSubmission
 		invitation := &domain.Invitation{
 			PartnerID:     assignment.PartnerID,
+			EmployeeID:    employee.ID,
 			TemplateID:    assignment.TemplateID,
 			DepartmentID:  departmentID,
 			ResponseID:    submission.ID,
+			Token:         submission.InvitationToken,
 			EmployeeEmail: employee.Email,
 			Status:        domain.InvitationStatusPending,
+			Sent:          false,
 			CreatedAt:     time.Now(),
 			UpdatedAt:     time.Now(),
 		}

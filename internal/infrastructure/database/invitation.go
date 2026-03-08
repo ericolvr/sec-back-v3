@@ -26,11 +26,11 @@ func (r *InvitationRepository) Create(ctx context.Context, invitation *domain.In
 	return r.db.QueryRowContext(
 		ctx, query,
 		invitation.PartnerID,
-		invitation.ResponseID, // employee_id
+		invitation.EmployeeID,
 		invitation.TemplateID,
 		invitation.DepartmentID,
-		invitation.EmployeeEmail, // token
-		invitation.Status == domain.InvitationStatusSent,
+		invitation.Token,
+		invitation.Sent,
 		invitation.SentAt,
 	).Scan(&invitation.ID, &invitation.CreatedAt)
 }
@@ -85,11 +85,12 @@ func (r *InvitationRepository) List(ctx context.Context, partnerID, limit, offse
 
 func (r *InvitationRepository) ListByTemplateAndDepartment(ctx context.Context, partnerID, templateID, departmentID int64) ([]*domain.Invitation, error) {
 	query := `
-		SELECT id, partner_id, employee_id, template_id, department_id,
-			   token, sent, sent_at, created_at
-		FROM invitations
-		WHERE partner_id = $1 AND template_id = $2 AND department_id = $3
-		ORDER BY created_at DESC`
+		SELECT i.id, i.partner_id, i.employee_id, i.template_id, i.department_id,
+			   i.token, i.sent, i.sent_at, i.created_at, e.email
+		FROM invitations i
+		JOIN employees e ON i.employee_id = e.id
+		WHERE i.partner_id = $1 AND i.template_id = $2 AND i.department_id = $3
+		ORDER BY i.created_at DESC`
 
 	rows, err := r.db.QueryContext(ctx, query, partnerID, templateID, departmentID)
 	if err != nil {
@@ -97,7 +98,7 @@ func (r *InvitationRepository) ListByTemplateAndDepartment(ctx context.Context, 
 	}
 	defer rows.Close()
 
-	return r.scanInvitations(rows)
+	return r.scanInvitationsWithEmail(rows)
 }
 
 func (r *InvitationRepository) ListByStatus(ctx context.Context, partnerID int64, status string, limit, offset int64) ([]*domain.Invitation, error) {
@@ -159,6 +160,34 @@ func (r *InvitationRepository) scanInvitations(rows *sql.Rows) ([]*domain.Invita
 		err := rows.Scan(
 			&inv.ID, &inv.PartnerID, &inv.ResponseID, &inv.TemplateID, &inv.DepartmentID,
 			&inv.EmployeeEmail, &sent, &inv.SentAt, &inv.CreatedAt,
+		)
+
+		if err != nil {
+			return nil, err
+		}
+
+		if sent {
+			inv.Status = domain.InvitationStatusSent
+		} else {
+			inv.Status = domain.InvitationStatusPending
+		}
+
+		invitations = append(invitations, &inv)
+	}
+
+	return invitations, rows.Err()
+}
+
+func (r *InvitationRepository) scanInvitationsWithEmail(rows *sql.Rows) ([]*domain.Invitation, error) {
+	var invitations []*domain.Invitation
+
+	for rows.Next() {
+		var inv domain.Invitation
+		var sent bool
+
+		err := rows.Scan(
+			&inv.ID, &inv.PartnerID, &inv.EmployeeID, &inv.TemplateID, &inv.DepartmentID,
+			&inv.Token, &sent, &inv.SentAt, &inv.CreatedAt, &inv.EmployeeEmail,
 		)
 
 		if err != nil {

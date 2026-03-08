@@ -18,7 +18,7 @@ func NewQuestionRoutes(questionHandler *api.QuestionHandler) *QuestionRoutes {
 
 func (qr *QuestionRoutes) SetupRoutes(v1 *gin.RouterGroup) {
 	questions := v1.Group("/questions")
-	questions.Use(middleware.TenantMiddleware())
+	questions.Use(middleware.PartnerMiddleware())
 	// questions.Use(middleware.JWTMiddleware())
 	{
 		questions.POST("", qr.questionHandler.Create)

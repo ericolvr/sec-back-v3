@@ -36,18 +36,18 @@ func (h *QuestionHandler) Create(c *gin.Context) {
 	tenantID := middleware.GetPartnerID(c)
 
 	question := &domain.Question{
-		PartnerID:       tenantID,
-		QuestionnaireID: req.QuestionnaireID,
-		Question:        req.Question,
-		Type:            req.Type,
-		Category:        req.Category,
-		Options:         req.Options,
-		ScoreValues:     req.ScoreValues,
-		Weight:          req.Weight,
-		Required:        req.Required,
-		OrderNum:        req.OrderNum,
-		CreatedAt:       time.Now(),
-		UpdatedAt:       time.Now(),
+		PartnerID:   tenantID,
+		TemplateID:  req.TemplateID,
+		Question:    req.Question,
+		Type:        req.Type,
+		Category:    req.Category,
+		Options:     req.Options,
+		ScoreValues: req.ScoreValues,
+		Weight:      req.Weight,
+		Required:    req.Required,
+		OrderNum:    req.OrderNum,
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
 	}
 
 	if err := h.questionService.Create(c.Request.Context(), question); err != nil {
@@ -79,8 +79,8 @@ func (h *QuestionHandler) ListAll(c *gin.Context) {
 
 	partnerID := middleware.GetPartnerID(c)
 
-	// ListAll sem filtro de questionário - passar 0 como questionnaireID
-	questions, err := h.questionService.List(c.Request.Context(), partnerID, 0, limit, offset)
+	// ListAll sem filtro de template
+	questions, err := h.questionService.ListAll(c.Request.Context(), partnerID, limit, offset)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "Erro ao listar questions",
@@ -100,12 +100,12 @@ func (h *QuestionHandler) ListAll(c *gin.Context) {
 func (h *QuestionHandler) List(c *gin.Context) {
 	limitStr := c.DefaultQuery("limit", "20")
 	offsetStr := c.DefaultQuery("offset", "0")
-	questionnaireIDStr := c.Param("id")
+	templateIDStr := c.Param("id")
 
-	questionnaireID, err := strconv.ParseInt(questionnaireIDStr, 10, 64)
+	templateID, err := strconv.ParseInt(templateIDStr, 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "questionnaire_id must be a valid number",
+			"error": "template_id must be a valid number",
 		})
 		return
 	}
@@ -120,9 +120,9 @@ func (h *QuestionHandler) List(c *gin.Context) {
 		offset = 0
 	}
 
-	tenantID := middleware.GetPartnerID(c)
+	partnerID := middleware.GetPartnerID(c)
 
-	questions, err := h.questionService.List(c.Request.Context(), tenantID, questionnaireID, int64(limit), int64(offset))
+	questions, err := h.questionService.List(c.Request.Context(), partnerID, templateID, int64(limit), int64(offset))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "Erro ao listar questions",
@@ -136,23 +136,23 @@ func (h *QuestionHandler) List(c *gin.Context) {
 		responses = append(responses, h.toQuestionResponse(question))
 	}
 
-	// Buscar dados do questionário
-	questionnaireInfo := dto.QuestionnaireInfo{
-		ID:          questionnaireID,
+	// Buscar dados do template
+	templateInfo := dto.TemplateInfo{
+		ID:          templateID,
 		Name:        "",
 		Description: "",
 		Active:      true,
 	}
 
-	// Se temos perguntas, pegar dados do questionário da primeira pergunta
+	// Se temos perguntas, pegar dados do template da primeira pergunta
 	if len(questions) > 0 && questions[0].AssessmentTemplate != nil {
-		questionnaireInfo.Name = questions[0].AssessmentTemplate.Name
-		questionnaireInfo.Description = questions[0].AssessmentTemplate.Description
-		questionnaireInfo.Active = questions[0].AssessmentTemplate.Active
+		templateInfo.Name = questions[0].AssessmentTemplate.Name
+		templateInfo.Description = questions[0].AssessmentTemplate.Description
+		templateInfo.Active = questions[0].AssessmentTemplate.Active
 	}
 
 	response := dto.QuestionListResponse{
-		Questionnaire:  questionnaireInfo,
+		Template:       templateInfo,
 		TotalQuestions: len(responses),
 		Questions:      responses,
 	}
@@ -209,17 +209,17 @@ func (h *QuestionHandler) Update(c *gin.Context) {
 	tenantID := middleware.GetPartnerID(c)
 
 	question := &domain.Question{
-		ID:              idInt,
-		PartnerID:       tenantID,
-		QuestionnaireID: updateDTO.QuestionnaireID,
-		Question:        updateDTO.Question,
-		Type:            updateDTO.Type,
-		Category:        updateDTO.Category,
-		Options:         updateDTO.Options,
-		ScoreValues:     updateDTO.ScoreValues,
-		Weight:          updateDTO.Weight,
-		Required:        updateDTO.Required,
-		OrderNum:        updateDTO.OrderNum,
+		ID:          idInt,
+		PartnerID:   tenantID,
+		TemplateID:  updateDTO.TemplateID,
+		Question:    updateDTO.Question,
+		Type:        updateDTO.Type,
+		Category:    updateDTO.Category,
+		Options:     updateDTO.Options,
+		ScoreValues: updateDTO.ScoreValues,
+		Weight:      updateDTO.Weight,
+		Required:    updateDTO.Required,
+		OrderNum:    updateDTO.OrderNum,
 	}
 
 	if err := h.questionService.Update(c.Request.Context(), question); err != nil {
@@ -273,25 +273,25 @@ func (h *QuestionHandler) Delete(c *gin.Context) {
 }
 
 func (h *QuestionHandler) toQuestionResponse(question *domain.Question) dto.QuestionResponse {
-	var questionnaireName string
+	var templateName string
 	if question.AssessmentTemplate != nil {
-		questionnaireName = question.AssessmentTemplate.Name
+		templateName = question.AssessmentTemplate.Name
 	}
 
 	return dto.QuestionResponse{
-		ID:                question.ID,
-		PartnerID:         question.PartnerID,
-		QuestionnaireID:   question.QuestionnaireID,
-		QuestionnaireName: questionnaireName,
-		Question:          question.Question,
-		Type:              question.Type,
-		Category:          question.Category,
-		Options:           question.Options,
-		ScoreValues:       question.ScoreValues,
-		Weight:            question.Weight,
-		Required:          question.Required,
-		OrderNum:          question.OrderNum,
-		CreatedAt:         question.CreatedAt.Format("2006-01-02 15:04:05"),
-		UpdatedAt:         question.UpdatedAt.Format("2006-01-02 15:04:05"),
+		ID:           question.ID,
+		PartnerID:    question.PartnerID,
+		TemplateID:   question.TemplateID,
+		TemplateName: templateName,
+		Question:     question.Question,
+		Type:         question.Type,
+		Category:     question.Category,
+		Options:      question.Options,
+		ScoreValues:  question.ScoreValues,
+		Weight:       question.Weight,
+		Required:     question.Required,
+		OrderNum:     question.OrderNum,
+		CreatedAt:    question.CreatedAt.Format("2006-01-02 15:04:05"),
+		UpdatedAt:    question.UpdatedAt.Format("2006-01-02 15:04:05"),
 	}
 }

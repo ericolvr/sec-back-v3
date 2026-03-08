@@ -41,26 +41,27 @@ func (qt QuestionType) String() string {
 }
 
 type Question struct {
-	ID              int64        `json:"id"`
-	PartnerID       int64        `json:"partner_id"`
-	QuestionnaireID int64        `json:"questionnaire_id"`
-	Question        string       `json:"question"`
-	Type            QuestionType `json:"type"`         // QuestionType enum
-	Category        string       `json:"category"`     // Categoria de risco: "Sobrecarga", "Autonomia", "Relacionamento", etc.
-	Options         []string     `json:"options"`      // Para multiple_choice: ["Nunca", "Raramente", "Às vezes", "Frequentemente", "Sempre"]
-	ScoreValues     []int        `json:"score_values"` // Scores correspondentes: [0, 1, 2, 3, 4]
-	Weight          float64      `json:"weight"`       // Peso da pergunta (1.0 = normal, 2.0 = dobro de importância)
-	Required        bool         `json:"required"`
-	OrderNum        int          `json:"order_num"`
-	CreatedAt       time.Time    `json:"created_at"`
-	UpdatedAt       time.Time    `json:"updated_at"`
+	ID          int64        `json:"id"`
+	PartnerID   int64        `json:"partner_id"`
+	TemplateID  int64        `json:"template_id"` // Referencia assessment_templates.id
+	Question    string       `json:"question"`
+	Type        QuestionType `json:"type"`         // QuestionType enum
+	Category    string       `json:"category"`     // Categoria de risco: "Sobrecarga", "Autonomia", "Relacionamento", etc.
+	Options     []string     `json:"options"`      // Para multiple_choice: ["Nunca", "Raramente", "Às vezes", "Frequentemente", "Sempre"]
+	ScoreValues []int        `json:"score_values"` // Scores correspondentes: [0, 1, 2, 3, 4]
+	Weight      float64      `json:"weight"`       // Peso da pergunta (1.0 = normal, 2.0 = dobro de importância)
+	Required    bool         `json:"required"`
+	OrderNum    int          `json:"order_num"`
+	CreatedAt   time.Time    `json:"created_at"`
+	UpdatedAt   time.Time    `json:"updated_at"`
 
 	AssessmentTemplate *AssessmentTemplate `json:"assessment_template,omitempty"`
 }
 
 type QuestionRepository interface {
 	Create(ctx context.Context, question *Question) error
-	List(ctx context.Context, partnerID, questionnaireID, limit, offset int64) ([]*Question, error)
+	List(ctx context.Context, partnerID, templateID, limit, offset int64) ([]*Question, error)
+	ListAllByPartner(ctx context.Context, partnerID, limit, offset int64) ([]*Question, error)
 	GetByID(ctx context.Context, partnerID, id int64) (*Question, error)
 	Update(ctx context.Context, question *Question) error
 	Delete(ctx context.Context, partnerID, id int64) error
@@ -70,8 +71,8 @@ func (q *Question) Validate() error {
 	if q.PartnerID <= 0 {
 		return fmt.Errorf("partner_id is required")
 	}
-	if q.QuestionnaireID <= 0 {
-		return fmt.Errorf("questionnaire_id is required")
+	if q.TemplateID <= 0 {
+		return fmt.Errorf("template_id is required")
 	}
 	if q.Question == "" {
 		return fmt.Errorf("question text is required")

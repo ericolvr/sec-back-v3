@@ -28,14 +28,24 @@ func (s *QuestionService) Create(ctx context.Context, question *domain.Question)
 	return nil
 }
 
-func (s *QuestionService) List(ctx context.Context, partnerID, questionnaireID, limit, offset int64) ([]*domain.Question, error) {
+func (s *QuestionService) List(ctx context.Context, partnerID, templateID, limit, offset int64) ([]*domain.Question, error) {
 	if limit <= 0 {
 		limit = 20
 	}
 	if offset < 0 {
 		offset = 0
 	}
-	return s.questionRepo.List(ctx, partnerID, questionnaireID, limit, offset)
+	return s.questionRepo.List(ctx, partnerID, templateID, limit, offset)
+}
+
+func (s *QuestionService) ListAll(ctx context.Context, partnerID, limit, offset int64) ([]*domain.Question, error) {
+	if limit <= 0 {
+		limit = 20
+	}
+	if offset < 0 {
+		offset = 0
+	}
+	return s.questionRepo.ListAllByPartner(ctx, partnerID, limit, offset)
 }
 
 func (s *QuestionService) GetByID(ctx context.Context, partnerID, id int64) (*domain.Question, error) {

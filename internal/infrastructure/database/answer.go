@@ -66,7 +66,7 @@ func (r *AnswerRepository) List(ctx context.Context, tenantID, responseID, limit
 		err := rows.Scan(
 			&a.ID, &a.PartnerID, &a.SubmissionID, &a.QuestionID,
 			&a.Value, &a.Score, &a.CreatedAt, &a.UpdatedAt,
-			&q.ID, &q.PartnerID, &q.QuestionnaireID, &q.Question,
+			&q.ID, &q.PartnerID, &q.TemplateID, &q.Question,
 			&q.Type, &optionsJSON, &scoreValuesJSON, &q.Weight,
 			&q.Required, &q.OrderNum, &q.CreatedAt, &q.UpdatedAt,
 		)
@@ -112,7 +112,7 @@ func (r *AnswerRepository) GetByID(ctx context.Context, tenantID, id int64) (*do
 	err := r.db.QueryRowContext(ctx, query, tenantID, id).Scan(
 		&a.ID, &a.PartnerID, &a.SubmissionID, &a.QuestionID,
 		&a.Value, &a.Score, &a.CreatedAt, &a.UpdatedAt,
-		&q.ID, &q.PartnerID, &q.QuestionnaireID, &q.Question,
+		&q.ID, &q.PartnerID, &q.TemplateID, &q.Question,
 		&q.Type, &optionsJSON, &scoreValuesJSON, &q.Weight,
 		&q.Required, &q.OrderNum, &q.CreatedAt, &q.UpdatedAt,
 	)
@@ -168,7 +168,7 @@ func (r *AnswerRepository) Update(ctx context.Context, answer *domain.Answer) er
 }
 
 func (r *AnswerRepository) Delete(ctx context.Context, partnerID, id int64) error {
-query := `DELETE FROM answers WHERE partner_id = $1 AND id = $2`
-_, err := r.db.ExecContext(ctx, query, partnerID, id)
-return err
+	query := `DELETE FROM answers WHERE partner_id = $1 AND id = $2`
+	_, err := r.db.ExecContext(ctx, query, partnerID, id)
+	return err
 }

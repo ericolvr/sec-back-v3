@@ -125,7 +125,7 @@ func main() {
 	router.ActionPlanRoutes = routes.NewActionPlanRoutes(actionPlanHandler)
 	router.CompanyRoutes = routes.NewCompanyRoutes(companyHandler)
 	router.PartnerRoutes = routes.NewPartnerRoutes(partnerHandler)
-	router.AssessmentTemplateRoutes = routes.NewAssessmentTemplateRoutes(templateHandler, versionHandler)
+	router.AssessmentTemplateRoutes = routes.NewAssessmentTemplateRoutes(templateHandler, versionHandler, questionHandler)
 	router.EmployeeSubmissionRoutes = routes.NewEmployeeSubmissionRoutes(submissionHandler)
 	router.QuestionnaireAssignmentRoutes = routes.NewQuestionnaireAssignmentRoutes(assignmentHandler)
 

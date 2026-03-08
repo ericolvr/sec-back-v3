@@ -164,7 +164,7 @@ CREATE INDEX idx_assessment_versions_partner_id ON assessment_versions(partner_i
 CREATE TABLE questions (
     id SERIAL PRIMARY KEY,
     partner_id BIGINT NOT NULL,
-    questionnaire_id BIGINT NOT NULL,
+    template_id BIGINT NOT NULL,
     question TEXT NOT NULL,
     type VARCHAR(50) NOT NULL, -- scale, multiple_choice, text, yes_no, number
     category VARCHAR(100), -- NR-1: Sobrecarga, Assédio, Autonomia, etc
@@ -176,11 +176,11 @@ CREATE TABLE questions (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (partner_id) REFERENCES partners(id) ON DELETE CASCADE,
-    FOREIGN KEY (questionnaire_id) REFERENCES assessment_templates(id) ON DELETE CASCADE
+    FOREIGN KEY (template_id) REFERENCES assessment_templates(id) ON DELETE CASCADE
 );
 
 CREATE INDEX idx_questions_partner_id ON questions(partner_id);
-CREATE INDEX idx_questions_questionnaire_id ON questions(questionnaire_id);
+CREATE INDEX idx_questions_template_id ON questions(template_id);
 CREATE INDEX idx_questions_category ON questions(category);
 
 -- ============================================

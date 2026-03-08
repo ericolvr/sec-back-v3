@@ -19,7 +19,7 @@ func NewQuestionRepository(db *sql.DB) *QuestionRepository {
 
 func (r *QuestionRepository) Create(ctx context.Context, question *domain.Question) error {
 	query := `
-		INSERT INTO questions (partner_id, questionnaire_id, question, type, category, options, score_values, weight, required, order_num, created_at, updated_at)
+		INSERT INTO questions (partner_id, template_id, question, type, category, options, score_values, weight, required, order_num, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 		RETURNING id
 	`
@@ -39,7 +39,7 @@ func (r *QuestionRepository) Create(ctx context.Context, question *domain.Questi
 		ctx,
 		query,
 		question.PartnerID,
-		question.QuestionnaireID,
+		question.TemplateID,
 		question.Question,
 		question.Type,
 		question.Category,
@@ -65,7 +65,7 @@ func (r *QuestionRepository) List(ctx context.Context, tenantID, questionnaireID
 		SELECT 
 			q.id,
 			q.partner_id,
-			q.questionnaire_id,
+			q.template_id,
 			q.question,
 			q.type,
 			q.category,
@@ -82,8 +82,8 @@ func (r *QuestionRepository) List(ctx context.Context, tenantID, questionnaireID
 			qn.active,
 			qn.created_at
 		FROM questions q
-		INNER JOIN questionnaires qn ON q.questionnaire_id = qn.id AND q.partner_id = qn.partner_id
-		WHERE q.partner_id = $1 AND q.questionnaire_id = $2
+		LEFT JOIN assessment_templates qn ON q.template_id = qn.id AND q.partner_id = qn.partner_id
+		WHERE q.partner_id = $1 AND q.template_id = $2
 		ORDER BY q.order_num ASC
 		LIMIT $3 OFFSET $4`
 
@@ -103,7 +103,7 @@ func (r *QuestionRepository) List(ctx context.Context, tenantID, questionnaireID
 		err := rows.Scan(
 			&q.ID,
 			&q.PartnerID,
-			&q.QuestionnaireID,
+			&q.TemplateID,
 			&q.Question,
 			&q.Type,
 			&q.Category,
@@ -144,12 +144,12 @@ func (r *QuestionRepository) List(ctx context.Context, tenantID, questionnaireID
 	return questions, nil
 }
 
-func (r *QuestionRepository) ListAllByTenant(ctx context.Context, tenantID, limit, offset int64) ([]*domain.Question, error) {
+func (r *QuestionRepository) ListAllByPartner(ctx context.Context, partnerID, limit, offset int64) ([]*domain.Question, error) {
 	query := `
 		SELECT 
 			q.id,
 			q.partner_id,
-			q.questionnaire_id,
+			q.template_id,
 			q.question,
 			q.type,
 			q.category,
@@ -166,12 +166,12 @@ func (r *QuestionRepository) ListAllByTenant(ctx context.Context, tenantID, limi
 			qn.active,
 			qn.created_at
 		FROM questions q
-		INNER JOIN questionnaires qn ON q.questionnaire_id = qn.id AND q.partner_id = qn.partner_id
+		LEFT JOIN assessment_templates qn ON q.template_id = qn.id AND q.partner_id = qn.partner_id
 		WHERE q.partner_id = $1
-		ORDER BY q.questionnaire_id, q.order_num ASC
+		ORDER BY q.template_id, q.order_num ASC
 		LIMIT $2 OFFSET $3`
 
-	rows, err := r.db.QueryContext(ctx, query, tenantID, limit, offset)
+	rows, err := r.db.QueryContext(ctx, query, partnerID, limit, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -187,7 +187,7 @@ func (r *QuestionRepository) ListAllByTenant(ctx context.Context, tenantID, limi
 		err := rows.Scan(
 			&q.ID,
 			&q.PartnerID,
-			&q.QuestionnaireID,
+			&q.TemplateID,
 			&q.Question,
 			&q.Type,
 			&q.Category,
@@ -233,7 +233,7 @@ func (r *QuestionRepository) GetByID(ctx context.Context, tenantID, id int64) (*
 		SELECT 
 			q.id,
 			q.partner_id,
-			q.questionnaire_id,
+			q.template_id,
 			q.question,
 			q.type,
 			q.category,
@@ -250,7 +250,7 @@ func (r *QuestionRepository) GetByID(ctx context.Context, tenantID, id int64) (*
 			qn.active,
 			qn.created_at
 		FROM questions q
-		INNER JOIN questionnaires qn ON q.questionnaire_id = qn.id AND q.partner_id = qn.partner_id
+		LEFT JOIN assessment_templates qn ON q.template_id = qn.id AND q.partner_id = qn.partner_id
 		WHERE q.partner_id = $1 AND q.id = $2`
 
 	var q domain.Question
@@ -265,7 +265,7 @@ func (r *QuestionRepository) GetByID(ctx context.Context, tenantID, id int64) (*
 	).Scan(
 		&q.ID,
 		&q.PartnerID,
-		&q.QuestionnaireID,
+		&q.TemplateID,
 		&q.Question,
 		&q.Type,
 		&q.Category,

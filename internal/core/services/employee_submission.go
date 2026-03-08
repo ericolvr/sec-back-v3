@@ -41,7 +41,7 @@ func (s *EmployeeSubmissionService) Create(ctx context.Context, submission *doma
 		return errors.New("employee is not active")
 	}
 
-	template, err := s.templateRepo.GetByID(ctx, submission.PartnerID, submission.QuestionnaireID)
+	template, err := s.templateRepo.GetByID(ctx, submission.PartnerID, submission.TemplateID)
 	if err != nil {
 		return errors.New("assessment template not found")
 	}

@@ -19,7 +19,7 @@ func NewNotificationRepository(db *sql.DB) *NotificationRepository {
 func (r *NotificationRepository) Create(ctx context.Context, notification *domain.Notification) error {
 	query := `
 		INSERT INTO notifications (
-			partner_id, company_id, department_id, questionnaire_id,
+			partner_id, company_id, department_id, template_id,
 			type, title, message, severity, metadata, created_at
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
 		RETURNING id, created_at`
@@ -29,7 +29,7 @@ func (r *NotificationRepository) Create(ctx context.Context, notification *domai
 		notification.PartnerID,
 		notification.CompanyID,
 		notification.DepartmentID,
-		notification.QuestionnaireID,
+		notification.TemplateID,
 		notification.Type,
 		notification.Title,
 		notification.Message,
@@ -40,7 +40,7 @@ func (r *NotificationRepository) Create(ctx context.Context, notification *domai
 
 func (r *NotificationRepository) GetByID(ctx context.Context, partnerID, id int64) (*domain.Notification, error) {
 	query := `
-		SELECT id, partner_id, company_id, department_id, questionnaire_id,
+		SELECT id, partner_id, company_id, department_id, template_id,
 			   type, title, message, severity, metadata,
 			   read, read_at, read_by, created_at
 		FROM notifications
@@ -48,7 +48,7 @@ func (r *NotificationRepository) GetByID(ctx context.Context, partnerID, id int6
 
 	var n domain.Notification
 	err := r.db.QueryRowContext(ctx, query, partnerID, id).Scan(
-		&n.ID, &n.PartnerID, &n.CompanyID, &n.DepartmentID, &n.QuestionnaireID,
+		&n.ID, &n.PartnerID, &n.CompanyID, &n.DepartmentID, &n.TemplateID,
 		&n.Type, &n.Title, &n.Message, &n.Severity, &n.Metadata,
 		&n.Read, &n.ReadAt, &n.ReadBy, &n.CreatedAt,
 	)
@@ -62,7 +62,7 @@ func (r *NotificationRepository) GetByID(ctx context.Context, partnerID, id int6
 
 func (r *NotificationRepository) List(ctx context.Context, partnerID int64, limit, offset int64) ([]*domain.Notification, error) {
 	query := `
-		SELECT id, partner_id, company_id, department_id, questionnaire_id,
+		SELECT id, partner_id, company_id, department_id, template_id,
 			   type, title, message, severity, metadata,
 			   read, read_at, read_by, created_at
 		FROM notifications
@@ -81,7 +81,7 @@ func (r *NotificationRepository) List(ctx context.Context, partnerID int64, limi
 
 func (r *NotificationRepository) ListUnread(ctx context.Context, partnerID int64, limit, offset int64) ([]*domain.Notification, error) {
 	query := `
-		SELECT id, partner_id, company_id, department_id, questionnaire_id,
+		SELECT id, partner_id, company_id, department_id, template_id,
 			   type, title, message, severity, metadata,
 			   read, read_at, read_by, created_at
 		FROM notifications
@@ -100,7 +100,7 @@ func (r *NotificationRepository) ListUnread(ctx context.Context, partnerID int64
 
 func (r *NotificationRepository) ListByType(ctx context.Context, partnerID int64, notifType string, limit, offset int64) ([]*domain.Notification, error) {
 	query := `
-		SELECT id, partner_id, company_id, department_id, questionnaire_id,
+		SELECT id, partner_id, company_id, department_id, template_id,
 			   type, title, message, severity, metadata,
 			   read, read_at, read_by, created_at
 		FROM notifications
@@ -163,7 +163,7 @@ func (r *NotificationRepository) scanNotifications(rows *sql.Rows) ([]*domain.No
 	for rows.Next() {
 		var n domain.Notification
 		err := rows.Scan(
-			&n.ID, &n.PartnerID, &n.CompanyID, &n.DepartmentID, &n.QuestionnaireID,
+			&n.ID, &n.PartnerID, &n.CompanyID, &n.DepartmentID, &n.TemplateID,
 			&n.Type, &n.Title, &n.Message, &n.Severity, &n.Metadata,
 			&n.Read, &n.ReadAt, &n.ReadBy, &n.CreatedAt,
 		)

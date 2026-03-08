@@ -4,8 +4,8 @@ package domain
 type DepartmentAnalytics struct {
 	DepartmentID       int64   `json:"department_id"`
 	DepartmentName     string  `json:"department_name"`
-	QuestionnaireID    int64   `json:"questionnaire_id"`
-	QuestionnaireName  string  `json:"questionnaire_name"`
+	TemplateID    int64   `json:"template_id"`
+	TemplateName  string  `json:"template_name"`
 	TotalEmployees     int64   `json:"total_employees"`
 	TotalSubmissions   int64   `json:"total_submissions"`
 	CompletedSubmissions int64 `json:"completed_submissions"`
@@ -37,8 +37,8 @@ type RiskCategorySummary struct {
 type CompanyAnalytics struct {
 	CompanyID          int64                  `json:"company_id"`
 	CompanyName        string                 `json:"company_name"`
-	QuestionnaireID    int64                  `json:"questionnaire_id"`
-	QuestionnaireName  string                 `json:"questionnaire_name"`
+	TemplateID    int64                  `json:"template_id"`
+	TemplateName  string                 `json:"template_name"`
 	TotalDepartments   int                    `json:"total_departments"`
 	OverallResponseRate float64               `json:"overall_response_rate"`
 	OverallRiskLevel   string                 `json:"overall_risk_level"`
@@ -67,7 +67,7 @@ type PartnerAnalytics struct {
 	PartnerID              int64              `json:"partner_id"`
 	PartnerName            string             `json:"partner_name"`
 	TotalCompanies         int                `json:"total_companies"`
-	TotalActiveQuestionnaires int             `json:"total_active_questionnaires"`
+	TotalActiveTemplates int             `json:"total_active_questionnaires"`
 	OverallResponseRate    float64            `json:"overall_response_rate"`
 	CompaniesAtRisk        int                `json:"companies_at_risk"`
 	Companies              []*CompanySummary  `json:"companies"`
@@ -81,7 +81,7 @@ type CompanySummary struct {
 	ResponseRate       float64 `json:"response_rate"`
 	RiskLevel          string  `json:"risk_level"`
 	DepartmentsAtRisk  int     `json:"departments_at_risk"`
-	ActiveQuestionnaires int   `json:"active_questionnaires"`
+	ActiveTemplates int   `json:"active_questionnaires"`
 }
 
 // CalculateReliability determina confiabilidade baseado na taxa de resposta

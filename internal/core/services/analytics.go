@@ -25,7 +25,7 @@ type AnalyticsService struct {
 	answerRepo             domain.AnswerRepository
 	formulaRepo            domain.CalculationFormulaRepository
 	reportRepo             domain.AnalyticsReportRepository
-	assignmentRepo         domain.QuestionnaireAssignmentRepository
+	assignmentRepo         domain.AssessmentAssignmentRepository
 }
 
 func NewAnalyticsService(
@@ -43,7 +43,7 @@ func NewAnalyticsService(
 	answerRepo domain.AnswerRepository,
 	formulaRepo domain.CalculationFormulaRepository,
 	reportRepo domain.AnalyticsReportRepository,
-	assignmentRepo domain.QuestionnaireAssignmentRepository,
+	assignmentRepo domain.AssessmentAssignmentRepository,
 ) *AnalyticsService {
 	return &AnalyticsService{
 		riskMetricsService:     riskMetricsService,
@@ -65,9 +65,9 @@ func NewAnalyticsService(
 }
 
 // GetDepartmentReport retorna relatório completo de um departamento (com nomes)
-func (s *AnalyticsService) GetDepartmentReport(ctx context.Context, partnerID, companyID, departmentID, questionnaireID int64) (*domain.DepartmentAnalytics, error) {
+func (s *AnalyticsService) GetDepartmentReport(ctx context.Context, partnerID, companyID, departmentID, templateID int64) (*domain.DepartmentAnalytics, error) {
 	// 1. Calcular ou buscar métricas
-	metrics, err := s.riskMetricsService.CalculateAndStore(ctx, partnerID, companyID, departmentID, questionnaireID)
+	metrics, err := s.riskMetricsService.CalculateAndStore(ctx, partnerID, companyID, departmentID, templateID)
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +79,7 @@ func (s *AnalyticsService) GetDepartmentReport(ctx context.Context, partnerID, c
 	}
 
 	// 3. Buscar assessment template (para nome)
-	template, err := s.templateRepo.GetByID(ctx, partnerID, questionnaireID)
+	template, err := s.templateRepo.GetByID(ctx, partnerID, templateID)
 	if err != nil {
 		return nil, errors.New("questionnaire not found")
 	}
@@ -115,8 +115,8 @@ func (s *AnalyticsService) GetDepartmentReport(ctx context.Context, partnerID, c
 	analytics := &domain.DepartmentAnalytics{
 		DepartmentID:         departmentID,
 		DepartmentName:       department.Name,
-		QuestionnaireID:      questionnaireID,
-		QuestionnaireName:    template.Name,
+		TemplateID:      templateID,
+		TemplateName:    template.Name,
 		TotalEmployees:       int64(metrics.TotalEmployees),
 		TotalSubmissions:     int64(metrics.TotalSubmissions),
 		CompletedSubmissions: int64(metrics.CompletedSubmissions),
@@ -140,7 +140,7 @@ func (s *AnalyticsService) GetDepartmentReport(ctx context.Context, partnerID, c
 }
 
 // GetCompanyReport retorna relatório consolidado de uma empresa
-func (s *AnalyticsService) GetCompanyReport(ctx context.Context, partnerID, companyID, questionnaireID int64) (*domain.CompanyAnalytics, error) {
+func (s *AnalyticsService) GetCompanyReport(ctx context.Context, partnerID, companyID, templateID int64) (*domain.CompanyAnalytics, error) {
 	// 1. Buscar company (para nome)
 	company, err := s.companyRepo.GetByID(ctx, partnerID, companyID)
 	if err != nil {
@@ -148,7 +148,7 @@ func (s *AnalyticsService) GetCompanyReport(ctx context.Context, partnerID, comp
 	}
 
 	// 2. Buscar template (para nome)
-	template, err := s.templateRepo.GetByID(ctx, partnerID, questionnaireID)
+	template, err := s.templateRepo.GetByID(ctx, partnerID, templateID)
 	if err != nil {
 		return nil, errors.New("questionnaire not found")
 	}
@@ -169,7 +169,7 @@ func (s *AnalyticsService) GetCompanyReport(ctx context.Context, partnerID, comp
 	}
 
 	for _, dept := range departments {
-		metrics, err := s.riskMetricsService.GetByDepartment(ctx, partnerID, dept.ID, questionnaireID)
+		metrics, err := s.riskMetricsService.GetByDepartment(ctx, partnerID, dept.ID, templateID)
 		if err != nil {
 			continue // Departamento sem métricas ainda
 		}
@@ -223,8 +223,8 @@ func (s *AnalyticsService) GetCompanyReport(ctx context.Context, partnerID, comp
 	return &domain.CompanyAnalytics{
 		CompanyID:           companyID,
 		CompanyName:         company.Name,
-		QuestionnaireID:     questionnaireID,
-		QuestionnaireName:   template.Name,
+		TemplateID:     templateID,
+		TemplateName:   template.Name,
 		TotalDepartments:    len(departmentSummaries),
 		OverallResponseRate: overallResponseRate,
 		OverallRiskLevel:    overallRiskLevel,
@@ -251,7 +251,7 @@ func (s *AnalyticsService) GetPartnerReport(ctx context.Context, partnerID int64
 	var companySummaries []*domain.CompanySummary
 	totalResponseRate := 0.0
 	companiesAtRisk := 0
-	totalActiveQuestionnaires := 0
+	totalActiveTemplates := 0
 
 	for _, company := range companies {
 		// Buscar departamentos da empresa
@@ -267,8 +267,8 @@ func (s *AnalyticsService) GetPartnerReport(ctx context.Context, partnerID int64
 		activeQuestionnaires := 0
 
 		for range departments {
-			// Buscar métricas do departamento (assumindo questionário mais recente)
-			// TODO: Melhorar para listar todos os questionários ativos
+			// Buscar métricas do departamento (assumindo template mais recente)
+			// TODO: Melhorar para listar todos os templates ativos
 			metrics, err := s.riskMetricsService.List(ctx, partnerID, 1, 0)
 			if err == nil && len(metrics) > 0 {
 				companyResponseRate += metrics[0].ResponseRate
@@ -297,12 +297,12 @@ func (s *AnalyticsService) GetPartnerReport(ctx context.Context, partnerID int64
 			ResponseRate:         companyResponseRate,
 			RiskLevel:            companyRiskLevel,
 			DepartmentsAtRisk:    departmentsAtRisk,
-			ActiveQuestionnaires: activeQuestionnaires,
+			ActiveTemplates: activeQuestionnaires,
 		}
 
 		companySummaries = append(companySummaries, summary)
 		totalResponseRate += companyResponseRate
-		totalActiveQuestionnaires += activeQuestionnaires
+		totalActiveTemplates += activeQuestionnaires
 	}
 
 	// 4. Calcular médias gerais
@@ -315,23 +315,23 @@ func (s *AnalyticsService) GetPartnerReport(ctx context.Context, partnerID int64
 		PartnerID:                 partnerID,
 		PartnerName:               partner.Name,
 		TotalCompanies:            len(companySummaries),
-		TotalActiveQuestionnaires: totalActiveQuestionnaires,
+		TotalActiveTemplates: totalActiveTemplates,
 		OverallResponseRate:       overallResponseRate,
 		CompaniesAtRisk:           companiesAtRisk,
 		Companies:                 companySummaries,
 	}, nil
 }
 
-// GetInProgressQuestionnaires retorna todos os questionários em andamento de uma empresa
-func (s *AnalyticsService) GetInProgressQuestionnaires(ctx context.Context, partnerID, companyID int64) ([]*domain.QuestionnaireInProgress, error) {
+// GetInProgressTemplates retorna todos os templates em andamento de uma empresa
+func (s *AnalyticsService) GetInProgressTemplates(ctx context.Context, partnerID, companyID int64) ([]*domain.TemplateInProgress, error) {
 	// 1. Buscar todos os departamentos da empresa
 	departments, err := s.departmentRepo.ListByCompany(ctx, partnerID, companyID, 1000, 0)
 	if err != nil {
 		return nil, err
 	}
 
-	// 2. Mapear questionários ativos (agrupados por questionnaire_id)
-	questionnaireMap := make(map[int64]*domain.QuestionnaireInProgress)
+	// 2. Mapear templates ativos (agrupados por template_id)
+	questionnaireMap := make(map[int64]*domain.TemplateInProgress)
 
 	settings, _ := s.settingsRepo.GetByPartnerID(ctx, partnerID)
 	if settings == nil {
@@ -339,8 +339,8 @@ func (s *AnalyticsService) GetInProgressQuestionnaires(ctx context.Context, part
 	}
 
 	for _, dept := range departments {
-		// Buscar métricas do departamento (assumindo que temos métricas para questionários ativos)
-		// TODO: Melhorar para buscar apenas questionários com assignments ativos
+		// Buscar métricas do departamento (assumindo que temos métricas para templates ativos)
+		// TODO: Melhorar para buscar apenas templates com assignments ativos
 		metrics, err := s.riskMetricsService.List(ctx, partnerID, 100, 0)
 		if err != nil {
 			continue
@@ -351,21 +351,21 @@ func (s *AnalyticsService) GetInProgressQuestionnaires(ctx context.Context, part
 				continue
 			}
 
-			// Verificar se já temos esse questionário no mapa
-			qip, exists := questionnaireMap[metric.QuestionnaireID]
+			// Verificar se já temos esse template no mapa
+			qip, exists := questionnaireMap[metric.TemplateID]
 			if !exists {
 				// Buscar template para pegar o nome
-				template, err := s.templateRepo.GetByID(ctx, partnerID, metric.QuestionnaireID)
+				template, err := s.templateRepo.GetByID(ctx, partnerID, metric.TemplateID)
 				if err != nil {
 					continue
 				}
 
-				qip = &domain.QuestionnaireInProgress{
-					QuestionnaireID:   metric.QuestionnaireID,
-					QuestionnaireName: template.Name,
+				qip = &domain.TemplateInProgress{
+					TemplateID:   metric.TemplateID,
+					TemplateName: template.Name,
 					Departments:       []*domain.DepartmentStatus{},
 				}
-				questionnaireMap[metric.QuestionnaireID] = qip
+				questionnaireMap[metric.TemplateID] = qip
 			}
 
 			// Adicionar status do departamento
@@ -401,8 +401,8 @@ func (s *AnalyticsService) GetInProgressQuestionnaires(ctx context.Context, part
 		}
 	}
 
-	// 3. Calcular médias e determinar risco geral de cada questionário
-	var result []*domain.QuestionnaireInProgress
+	// 3. Calcular médias e determinar risco geral de cada template
+	var result []*domain.TemplateInProgress
 	for _, qip := range questionnaireMap {
 		if qip.TotalDepartments > 0 {
 			qip.ResponseRate = qip.ResponseRate / float64(qip.TotalDepartments)
@@ -423,15 +423,15 @@ func (s *AnalyticsService) GetInProgressQuestionnaires(ctx context.Context, part
 }
 
 // calculateRiskByCategory calcula risco por categoria (obrigatório NR-1)
-func (s *AnalyticsService) calculateRiskByCategory(ctx context.Context, partnerID, companyID, departmentID, questionnaireID int64) ([]*domain.RiskCategory, error) {
+func (s *AnalyticsService) calculateRiskByCategory(ctx context.Context, partnerID, companyID, departmentID, templateID int64) ([]*domain.RiskCategory, error) {
 	// Buscar fórmula ativa do partner
 	formula, err := s.formulaRepo.GetActive(ctx, partnerID)
 	if err != nil {
 		formula = domain.DefaultCalculationFormula(partnerID)
 	}
 
-	// 1. Buscar todas as perguntas do questionário
-	allQuestions, err := s.questionRepo.List(ctx, partnerID, questionnaireID, 1000, 0)
+	// 1. Buscar todas as perguntas do template
+	allQuestions, err := s.questionRepo.List(ctx, partnerID, templateID, 1000, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -444,7 +444,7 @@ func (s *AnalyticsService) calculateRiskByCategory(ctx context.Context, partnerI
 
 	var completedSubmissions []*domain.EmployeeSubmission
 	for _, sub := range allSubmissions {
-		if sub.DepartmentID == departmentID && sub.QuestionnaireID == questionnaireID && sub.Status == "completed" {
+		if sub.DepartmentID == departmentID && sub.TemplateID == templateID && sub.Status == "completed" {
 			completedSubmissions = append(completedSubmissions, sub)
 		}
 	}
@@ -515,7 +515,7 @@ func (s *AnalyticsService) calculateRiskByCategory(ctx context.Context, partnerI
 }
 
 // CreateSnapshot congela dados de analytics em um snapshot imutável
-func (s *AnalyticsService) CreateSnapshot(ctx context.Context, partnerID, companyID, departmentID, questionnaireID int64, createdBy *int64) (*domain.AnalyticsReport, error) {
+func (s *AnalyticsService) CreateSnapshot(ctx context.Context, partnerID, companyID, departmentID, templateID int64, createdBy *int64) (*domain.AnalyticsReport, error) {
 	// 1. Buscar fórmula ativa do partner
 	formula, err := s.formulaRepo.GetActive(ctx, partnerID)
 	if err != nil {
@@ -523,7 +523,7 @@ func (s *AnalyticsService) CreateSnapshot(ctx context.Context, partnerID, compan
 	}
 
 	// 2. Obter analytics atuais do departamento
-	analytics, err := s.GetDepartmentReport(ctx, partnerID, companyID, departmentID, questionnaireID)
+	analytics, err := s.GetDepartmentReport(ctx, partnerID, companyID, departmentID, templateID)
 	if err != nil {
 		return nil, err
 	}
@@ -541,7 +541,7 @@ func (s *AnalyticsService) CreateSnapshot(ctx context.Context, partnerID, compan
 	report := &domain.AnalyticsReport{
 		PartnerID:       partnerID,
 		DepartmentID:    departmentID,
-		QuestionnaireID: questionnaireID,
+		TemplateID: templateID,
 		CreatedBy:       createdBy,
 	}
 
@@ -560,7 +560,7 @@ func (s *AnalyticsService) CreateSnapshot(ctx context.Context, partnerID, compan
 	}
 
 	// 8. Calcular e salvar risk categories vinculadas ao snapshot
-	riskCategories, err := s.calculateRiskByCategory(ctx, partnerID, companyID, departmentID, questionnaireID)
+	riskCategories, err := s.calculateRiskByCategory(ctx, partnerID, companyID, departmentID, templateID)
 	if err == nil && len(riskCategories) > 0 {
 		for _, rc := range riskCategories {
 			rc.SnapshotID = report.ID
@@ -570,13 +570,13 @@ func (s *AnalyticsService) CreateSnapshot(ctx context.Context, partnerID, compan
 		}
 
 		// 9. Auto-gerar Action Plans baseados em risk categories
-		if err := s.autoGenerateActionPlans(ctx, partnerID, companyID, departmentID, questionnaireID, report.ID, riskCategories); err != nil {
+		if err := s.autoGenerateActionPlans(ctx, partnerID, companyID, departmentID, templateID, report.ID, riskCategories); err != nil {
 			// Log error but don't fail snapshot creation
 		}
 	}
 
 	// 10. Fechar questionnaire assignment deste departamento
-	if err := s.assignmentRepo.CloseByQuestionnaireAndDepartment(ctx, partnerID, questionnaireID, departmentID); err != nil {
+	if err := s.assignmentRepo.CloseByTemplateAndDepartment(ctx, partnerID, templateID, departmentID); err != nil {
 		// Log error but don't fail snapshot creation
 		// Assignment might not exist if created before this feature
 	}
@@ -599,9 +599,9 @@ func (s *AnalyticsService) ListReportsByDepartment(ctx context.Context, partnerI
 	return s.reportRepo.ListByDepartment(ctx, partnerID, departmentID, limit, offset)
 }
 
-// ListReportsByQuestionnaire lista snapshots de um questionário
-func (s *AnalyticsService) ListReportsByQuestionnaire(ctx context.Context, partnerID, questionnaireID int64, limit, offset int64) ([]*domain.AnalyticsReport, error) {
-	return s.reportRepo.ListByQuestionnaire(ctx, partnerID, questionnaireID, limit, offset)
+// ListReportsByTemplate lista snapshots de um template
+func (s *AnalyticsService) ListReportsByTemplate(ctx context.Context, partnerID, templateID int64, limit, offset int64) ([]*domain.AnalyticsReport, error) {
+	return s.reportRepo.ListByTemplate(ctx, partnerID, templateID, limit, offset)
 }
 
 // GetRiskCategoriesBySnapshot busca risk categories de um snapshot
@@ -610,7 +610,7 @@ func (s *AnalyticsService) GetRiskCategoriesBySnapshot(ctx context.Context, part
 }
 
 // autoGenerateActionPlans gera automaticamente action plans baseado em templates e risk categories
-func (s *AnalyticsService) autoGenerateActionPlans(ctx context.Context, partnerID, companyID, departmentID, questionnaireID, snapshotID int64, riskCategories []*domain.RiskCategory) error {
+func (s *AnalyticsService) autoGenerateActionPlans(ctx context.Context, partnerID, companyID, departmentID, templateID, snapshotID int64, riskCategories []*domain.RiskCategory) error {
 	// Buscar department para obter nome
 	department, err := s.departmentRepo.GetByID(ctx, partnerID, departmentID)
 	if err != nil {
@@ -629,7 +629,7 @@ func (s *AnalyticsService) autoGenerateActionPlans(ctx context.Context, partnerI
 			// Verificar se template corresponde à categoria e nível de risco
 			if template.Category == riskCat.Category && template.ShouldTrigger(riskCat.RiskLevel) {
 				// Criar action plan a partir do template
-				actionPlan := s.buildActionPlanFromTemplate(template, riskCat, partnerID, companyID, departmentID, questionnaireID, snapshotID, department.Name)
+				actionPlan := s.buildActionPlanFromTemplate(template, riskCat, partnerID, companyID, departmentID, templateID, snapshotID, department.Name)
 
 				// Salvar action plan
 				if err := s.actionPlanRepo.Create(ctx, actionPlan); err != nil {
@@ -647,7 +647,7 @@ func (s *AnalyticsService) autoGenerateActionPlans(ctx context.Context, partnerI
 func (s *AnalyticsService) buildActionPlanFromTemplate(
 	template *domain.ActionPlanTemplate,
 	riskCat *domain.RiskCategory,
-	partnerID, companyID, departmentID, questionnaireID, snapshotID int64,
+	partnerID, companyID, departmentID, templateID, snapshotID int64,
 	departmentName string,
 ) *domain.ActionPlan {
 	// Substituir variáveis no título e descrição
@@ -660,7 +660,7 @@ func (s *AnalyticsService) buildActionPlanFromTemplate(
 	return &domain.ActionPlan{
 		PartnerID:       partnerID,
 		CompanyID:       companyID,
-		QuestionnaireID: questionnaireID,
+		TemplateID: templateID,
 		DepartmentID:    departmentID,
 		SnapshotID:      &snapshotID,
 		Title:           title,

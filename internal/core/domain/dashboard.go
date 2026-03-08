@@ -4,7 +4,7 @@ package domain
 type CompanyDashboard struct {
 	CompanyID                 int64                           `json:"company_id"`
 	CompanyName               string                          `json:"company_name"`
-	InProgressQuestionnaires  []*QuestionnaireInProgress      `json:"in_progress_questionnaires"`
+	InProgressQuestionnaires  []*TemplateInProgress      `json:"in_progress_questionnaires"`
 	UnreadNotifications       int64                           `json:"unread_notifications"`
 	NotificationsPreview      []*Notification                 `json:"notifications_preview"`
 	PendingActionPlans        int                             `json:"pending_action_plans"`
@@ -16,10 +16,10 @@ type CompanyDashboard struct {
 	Alerts                    []string                        `json:"alerts"`
 }
 
-// QuestionnaireInProgress representa um questionário em andamento
-type QuestionnaireInProgress struct {
-	QuestionnaireID     int64               `json:"questionnaire_id"`
-	QuestionnaireName   string              `json:"questionnaire_name"`
+// TemplateInProgress representa um template em andamento
+type TemplateInProgress struct {
+	TemplateID     int64               `json:"template_id"`
+	TemplateName   string              `json:"template_name"`
 	TotalDepartments    int                 `json:"total_departments"`
 	ResponseRate        float64             `json:"response_rate"`
 	OverallRiskLevel    string              `json:"overall_risk_level"`
@@ -27,7 +27,7 @@ type QuestionnaireInProgress struct {
 	Departments         []*DepartmentStatus `json:"departments"`
 }
 
-// DepartmentStatus representa o status de um departamento em um questionário
+// DepartmentStatus representa o status de um departamento em um template
 type DepartmentStatus struct {
 	DepartmentID       int64   `json:"department_id"`
 	DepartmentName     string  `json:"department_name"`
@@ -44,7 +44,7 @@ type PartnerDashboard struct {
 	PartnerName               string           `json:"partner_name"`
 	CompaniesSummary          []*CompanyStatus `json:"companies_summary"`
 	TotalCompanies            int              `json:"total_companies"`
-	TotalActiveQuestionnaires int              `json:"total_active_questionnaires"`
+	TotalActiveTemplates int              `json:"total_active_questionnaires"`
 	CompaniesAtRisk           int              `json:"companies_at_risk"`
 	OverallResponseRate       float64          `json:"overall_response_rate"`
 	Alerts                    []string         `json:"alerts"`
@@ -54,7 +54,7 @@ type PartnerDashboard struct {
 type CompanyStatus struct {
 	CompanyID            int64   `json:"company_id"`
 	CompanyName          string  `json:"company_name"`
-	ActiveQuestionnaires int     `json:"active_questionnaires"`
+	ActiveTemplates int     `json:"active_questionnaires"`
 	ResponseRate         float64 `json:"response_rate"`
 	RiskLevel            string  `json:"risk_level"`
 	DepartmentsAtRisk    int     `json:"departments_at_risk"`
@@ -67,17 +67,17 @@ type DepartmentDashboard struct {
 	DepartmentName       string                       `json:"department_name"`
 	CompanyID            int64                        `json:"company_id"`
 	CompanyName          string                       `json:"company_name"`
-	ActiveQuestionnaires []*DepartmentQuestionnaire   `json:"active_questionnaires"`
+	ActiveTemplates []*DepartmentQuestionnaire   `json:"active_questionnaires"`
 	EmployeesSummary     *EmployeesSummary            `json:"employees_summary"`
 	ActionPlans          []*ActionPlanSummary         `json:"action_plans"`
 	RiskCategories       []*RiskCategorySummary       `json:"risk_categories"`
 	Alerts               []string                     `json:"alerts"`
 }
 
-// DepartmentQuestionnaire representa um questionário do departamento
+// DepartmentQuestionnaire representa um template do departamento
 type DepartmentQuestionnaire struct {
-	QuestionnaireID  int64   `json:"questionnaire_id"`
-	QuestionnaireName string `json:"questionnaire_name"`
+	TemplateID  int64   `json:"template_id"`
+	TemplateName string `json:"template_name"`
 	TotalEmployees   int64   `json:"total_employees"`
 	Responses        int64   `json:"responses"`
 	ResponseRate     float64 `json:"response_rate"`

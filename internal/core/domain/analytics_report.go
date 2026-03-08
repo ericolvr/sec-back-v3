@@ -31,7 +31,7 @@ type AnalyticsReport struct {
 	ID              int64     `json:"id"`
 	PartnerID       int64     `json:"partner_id"`
 	DepartmentID    int64     `json:"department_id"`
-	QuestionnaireID int64     `json:"questionnaire_id"`
+	TemplateID int64     `json:"template_id"`
 	ReportData      []byte    `json:"report_data"` // JSON do DepartmentAnalyticsWithMetadata
 	CreatedBy       *int64    `json:"created_by,omitempty"`
 	CreatedAt       time.Time `json:"created_at"`
@@ -42,8 +42,8 @@ type AnalyticsReportRepository interface {
 	GetByID(ctx context.Context, partnerID, id int64) (*AnalyticsReport, error)
 	List(ctx context.Context, partnerID int64, limit, offset int64) ([]*AnalyticsReport, error)
 	ListByDepartment(ctx context.Context, partnerID, departmentID int64, limit, offset int64) ([]*AnalyticsReport, error)
-	ListByQuestionnaire(ctx context.Context, partnerID, questionnaireID int64, limit, offset int64) ([]*AnalyticsReport, error)
-	ListByDepartmentAndQuestionnaire(ctx context.Context, partnerID, departmentID, questionnaireID int64, limit, offset int64) ([]*AnalyticsReport, error)
+	ListByTemplate(ctx context.Context, partnerID, templateID int64, limit, offset int64) ([]*AnalyticsReport, error)
+	ListByDepartmentAndTemplate(ctx context.Context, partnerID, departmentID, templateID int64, limit, offset int64) ([]*AnalyticsReport, error)
 	Delete(ctx context.Context, partnerID, id int64) error
 }
 
@@ -56,8 +56,8 @@ func (ar *AnalyticsReport) Validate() error {
 		return fmt.Errorf("department_id is required")
 	}
 	
-	if ar.QuestionnaireID <= 0 {
-		return fmt.Errorf("questionnaire_id is required")
+	if ar.TemplateID <= 0 {
+		return fmt.Errorf("template_id is required")
 	}
 	
 	if len(ar.ReportData) == 0 {

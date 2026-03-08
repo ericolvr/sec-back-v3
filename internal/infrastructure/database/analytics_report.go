@@ -18,7 +18,7 @@ func NewAnalyticsReportRepository(db *sql.DB) *AnalyticsReportRepository {
 func (r *AnalyticsReportRepository) Create(ctx context.Context, report *domain.AnalyticsReport) error {
 	query := `
 		INSERT INTO analytics_reports (
-			partner_id, department_id, questionnaire_id,
+			partner_id, department_id, template_id,
 			report_data, created_by, created_at
 		) VALUES ($1, $2, $3, $4, $5, NOW())
 		RETURNING id, created_at`
@@ -27,7 +27,7 @@ func (r *AnalyticsReportRepository) Create(ctx context.Context, report *domain.A
 		ctx, query,
 		report.PartnerID,
 		report.DepartmentID,
-		report.QuestionnaireID,
+		report.TemplateID,
 		report.ReportData,
 		report.CreatedBy,
 	).Scan(&report.ID, &report.CreatedAt)
@@ -35,7 +35,7 @@ func (r *AnalyticsReportRepository) Create(ctx context.Context, report *domain.A
 
 func (r *AnalyticsReportRepository) GetByID(ctx context.Context, partnerID, id int64) (*domain.AnalyticsReport, error) {
 	query := `
-		SELECT id, partner_id, department_id, questionnaire_id,
+		SELECT id, partner_id, department_id, template_id,
 			report_data, created_by, created_at
 		FROM analytics_reports
 		WHERE partner_id = $1 AND id = $2`
@@ -45,7 +45,7 @@ func (r *AnalyticsReportRepository) GetByID(ctx context.Context, partnerID, id i
 		&report.ID,
 		&report.PartnerID,
 		&report.DepartmentID,
-		&report.QuestionnaireID,
+		&report.TemplateID,
 		&report.ReportData,
 		&report.CreatedBy,
 		&report.CreatedAt,
@@ -60,7 +60,7 @@ func (r *AnalyticsReportRepository) GetByID(ctx context.Context, partnerID, id i
 
 func (r *AnalyticsReportRepository) List(ctx context.Context, partnerID int64, limit, offset int64) ([]*domain.AnalyticsReport, error) {
 	query := `
-		SELECT id, partner_id, department_id, questionnaire_id,
+		SELECT id, partner_id, department_id, template_id,
 			report_data, created_by, created_at
 		FROM analytics_reports
 		WHERE partner_id = $1
@@ -78,7 +78,7 @@ func (r *AnalyticsReportRepository) List(ctx context.Context, partnerID int64, l
 
 func (r *AnalyticsReportRepository) ListByDepartment(ctx context.Context, partnerID, departmentID int64, limit, offset int64) ([]*domain.AnalyticsReport, error) {
 	query := `
-		SELECT id, partner_id, department_id, questionnaire_id,
+		SELECT id, partner_id, department_id, template_id,
 			report_data, created_by, created_at
 		FROM analytics_reports
 		WHERE partner_id = $1 AND department_id = $2
@@ -94,16 +94,16 @@ func (r *AnalyticsReportRepository) ListByDepartment(ctx context.Context, partne
 	return r.scanReports(rows)
 }
 
-func (r *AnalyticsReportRepository) ListByQuestionnaire(ctx context.Context, partnerID, questionnaireID int64, limit, offset int64) ([]*domain.AnalyticsReport, error) {
+func (r *AnalyticsReportRepository) ListByTemplate(ctx context.Context, partnerID, templateID int64, limit, offset int64) ([]*domain.AnalyticsReport, error) {
 	query := `
-		SELECT id, partner_id, department_id, questionnaire_id,
+		SELECT id, partner_id, department_id, template_id,
 			report_data, created_by, created_at
 		FROM analytics_reports
-		WHERE partner_id = $1 AND questionnaire_id = $2
+		WHERE partner_id = $1 AND template_id = $2
 		ORDER BY created_at DESC
 		LIMIT $3 OFFSET $4`
 
-	rows, err := r.db.QueryContext(ctx, query, partnerID, questionnaireID, limit, offset)
+	rows, err := r.db.QueryContext(ctx, query, partnerID, templateID, limit, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -112,16 +112,16 @@ func (r *AnalyticsReportRepository) ListByQuestionnaire(ctx context.Context, par
 	return r.scanReports(rows)
 }
 
-func (r *AnalyticsReportRepository) ListByDepartmentAndQuestionnaire(ctx context.Context, partnerID, departmentID, questionnaireID int64, limit, offset int64) ([]*domain.AnalyticsReport, error) {
+func (r *AnalyticsReportRepository) ListByDepartmentAndTemplate(ctx context.Context, partnerID, departmentID, templateID int64, limit, offset int64) ([]*domain.AnalyticsReport, error) {
 	query := `
-		SELECT id, partner_id, department_id, questionnaire_id,
+		SELECT id, partner_id, department_id, template_id,
 			report_data, created_by, created_at
 		FROM analytics_reports
-		WHERE partner_id = $1 AND department_id = $2 AND questionnaire_id = $3
+		WHERE partner_id = $1 AND department_id = $2 AND template_id = $3
 		ORDER BY created_at DESC
 		LIMIT $4 OFFSET $5`
 
-	rows, err := r.db.QueryContext(ctx, query, partnerID, departmentID, questionnaireID, limit, offset)
+	rows, err := r.db.QueryContext(ctx, query, partnerID, departmentID, templateID, limit, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -145,7 +145,7 @@ func (r *AnalyticsReportRepository) scanReports(rows *sql.Rows) ([]*domain.Analy
 			&report.ID,
 			&report.PartnerID,
 			&report.DepartmentID,
-			&report.QuestionnaireID,
+			&report.TemplateID,
 			&report.ReportData,
 			&report.CreatedBy,
 			&report.CreatedAt,

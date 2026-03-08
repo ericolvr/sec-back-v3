@@ -155,7 +155,7 @@ func (s *AnswerService) updateSubmissionStatus(ctx context.Context, partnerID, r
 		submission.Status = "pending"
 	} else {
 		// Check if all required questions are answered
-		questions, err := s.questionRepo.List(ctx, partnerID, submission.QuestionnaireID, MaxQuestionsPerTemplate, 0)
+		questions, err := s.questionRepo.List(ctx, partnerID, submission.TemplateID, MaxQuestionsPerTemplate, 0)
 		if err != nil {
 			// If can't get questions, just set to in_progress
 			submission.Status = "in_progress"

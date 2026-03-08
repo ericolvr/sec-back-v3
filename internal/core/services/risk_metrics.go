@@ -43,8 +43,8 @@ func NewRiskMetricsService(
 	}
 }
 
-func (s *RiskMetricsService) CalculateAndStore(ctx context.Context, partnerID, companyID, departmentID, questionnaireID int64) (*domain.RiskMetrics, error) {
-	if partnerID <= 0 || companyID <= 0 || departmentID <= 0 || questionnaireID <= 0 {
+func (s *RiskMetricsService) CalculateAndStore(ctx context.Context, partnerID, companyID, departmentID, templateID int64) (*domain.RiskMetrics, error) {
+	if partnerID <= 0 || companyID <= 0 || departmentID <= 0 || templateID <= 0 {
 		return nil, errors.New("invalid IDs")
 	}
 
@@ -75,7 +75,7 @@ func (s *RiskMetricsService) CalculateAndStore(ctx context.Context, partnerID, c
 	var completedSubmissionIDs []int64
 
 	for _, sub := range submissions {
-		if sub.QuestionnaireID == questionnaireID {
+		if sub.TemplateID == templateID {
 			totalSubmissions++
 			if sub.Status == "completed" {
 				completedSubmissions++
@@ -89,8 +89,8 @@ func (s *RiskMetricsService) CalculateAndStore(ctx context.Context, partnerID, c
 		responseRate = (float64(completedSubmissions) / float64(totalEmployees)) * 100
 	}
 
-	// Buscar todas as perguntas do questionário para obter os pesos
-	questions, err := s.questionRepo.List(ctx, partnerID, questionnaireID, MaxQuestionsPerTemplate, 0)
+	// Buscar todas as perguntas do template para obter os pesos
+	questions, err := s.questionRepo.List(ctx, partnerID, templateID, MaxQuestionsPerTemplate, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -151,7 +151,7 @@ func (s *RiskMetricsService) CalculateAndStore(ctx context.Context, partnerID, c
 		PartnerID:            partnerID,
 		CompanyID:            companyID,
 		DepartmentID:         departmentID,
-		QuestionnaireID:      questionnaireID,
+		TemplateID:      templateID,
 		TotalEmployees:       int(totalEmployees),
 		TotalSubmissions:     int(totalSubmissions),
 		CompletedSubmissions: int(completedSubmissions),
@@ -170,20 +170,20 @@ func (s *RiskMetricsService) CalculateAndStore(ctx context.Context, partnerID, c
 	return metrics, nil
 }
 
-func (s *RiskMetricsService) GetByDepartment(ctx context.Context, partnerID, departmentID, questionnaireID int64) (*domain.RiskMetrics, error) {
-	if partnerID <= 0 || departmentID <= 0 || questionnaireID <= 0 {
+func (s *RiskMetricsService) GetByDepartment(ctx context.Context, partnerID, departmentID, templateID int64) (*domain.RiskMetrics, error) {
+	if partnerID <= 0 || departmentID <= 0 || templateID <= 0 {
 		return nil, errors.New("invalid IDs")
 	}
 
-	return s.metricsRepo.GetByDepartment(ctx, partnerID, departmentID, questionnaireID)
+	return s.metricsRepo.GetByDepartment(ctx, partnerID, departmentID, templateID)
 }
 
-func (s *RiskMetricsService) GetByCompany(ctx context.Context, partnerID, companyID, questionnaireID int64) ([]*domain.RiskMetrics, error) {
-	if partnerID <= 0 || companyID <= 0 || questionnaireID <= 0 {
+func (s *RiskMetricsService) GetByCompany(ctx context.Context, partnerID, companyID, templateID int64) ([]*domain.RiskMetrics, error) {
+	if partnerID <= 0 || companyID <= 0 || templateID <= 0 {
 		return nil, errors.New("invalid IDs")
 	}
 
-	return s.metricsRepo.GetByCompany(ctx, partnerID, companyID, questionnaireID)
+	return s.metricsRepo.GetByCompany(ctx, partnerID, companyID, templateID)
 }
 
 func (s *RiskMetricsService) List(ctx context.Context, partnerID int64, limit, offset int64) ([]*domain.RiskMetrics, error) {

@@ -170,7 +170,7 @@ func (h *AnswerHandler) Update(c *gin.Context) {
 		}
 		if err.Error() == "cannot update answer: response already completed" {
 			c.JSON(http.StatusForbidden, gin.H{
-				"error": "Não é possível atualizar resposta: questionário já foi finalizado",
+				"error": "Não é possível atualizar resposta: template já foi finalizado",
 			})
 			return
 		}
@@ -213,7 +213,7 @@ func (h *AnswerHandler) SubmitBatch(c *gin.Context) {
 	// Verificar se já foi completado
 	if response.Status == domain.SubmissionStatusCompleted {
 		c.JSON(http.StatusForbidden, gin.H{
-			"error": "Este questionário já foi respondido",
+			"error": "Este template já foi respondido",
 		})
 		return
 	}
@@ -258,7 +258,7 @@ func (h *AnswerHandler) SubmitBatch(c *gin.Context) {
 	// TODO: Implementar submissionService.Update quando necessário
 	// if err := h.submissionService.Update(c.Request.Context(), response); err != nil {
 	// 	c.JSON(http.StatusInternalServerError, gin.H{
-	// 		"error":   "Erro ao finalizar questionário",
+	// 		"error":   "Erro ao finalizar template",
 	// 		"details": err.Error(),
 	// 	})
 	// 	return

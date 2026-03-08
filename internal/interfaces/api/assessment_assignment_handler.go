@@ -9,21 +9,21 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type QuestionnaireAssignmentHandler struct {
-	assignmentService *services.QuestionnaireAssignmentService
+type AssessmentAssignmentHandler struct {
+	assignmentService *services.AssessmentAssignmentService
 }
 
-func NewQuestionnaireAssignmentHandler(assignmentService *services.QuestionnaireAssignmentService) *QuestionnaireAssignmentHandler {
-	return &QuestionnaireAssignmentHandler{
+func NewAssessmentAssignmentHandler(assignmentService *services.AssessmentAssignmentService) *AssessmentAssignmentHandler {
+	return &AssessmentAssignmentHandler{
 		assignmentService: assignmentService,
 	}
 }
 
-func (h *QuestionnaireAssignmentHandler) Create(c *gin.Context) {
+func (h *AssessmentAssignmentHandler) Create(c *gin.Context) {
 	partnerID := c.GetInt64("partner_id")
 
 	var req struct {
-		QuestionnaireID int64 `json:"questionnaire_id" binding:"required"`
+		TemplateID int64 `json:"template_id" binding:"required"`
 		DepartmentID    int64 `json:"department_id" binding:"required"`
 	}
 
@@ -32,9 +32,9 @@ func (h *QuestionnaireAssignmentHandler) Create(c *gin.Context) {
 		return
 	}
 
-	assignment := &domain.QuestionnaireAssignment{
+	assignment := &domain.AssessmentAssignment{
 		PartnerID:       partnerID,
-		QuestionnaireID: req.QuestionnaireID,
+		TemplateID: req.TemplateID,
 		DepartmentID:    req.DepartmentID,
 		Active:          true,
 	}
@@ -47,7 +47,7 @@ func (h *QuestionnaireAssignmentHandler) Create(c *gin.Context) {
 	c.JSON(http.StatusCreated, assignment)
 }
 
-func (h *QuestionnaireAssignmentHandler) List(c *gin.Context) {
+func (h *AssessmentAssignmentHandler) List(c *gin.Context) {
 	partnerID := c.GetInt64("partner_id")
 
 	limit, _ := strconv.ParseInt(c.DefaultQuery("limit", "100"), 10, 64)
@@ -62,7 +62,7 @@ func (h *QuestionnaireAssignmentHandler) List(c *gin.Context) {
 	c.JSON(http.StatusOK, assignments)
 }
 
-func (h *QuestionnaireAssignmentHandler) GetByID(c *gin.Context) {
+func (h *AssessmentAssignmentHandler) GetByID(c *gin.Context) {
 	partnerID := c.GetInt64("partner_id")
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
@@ -79,7 +79,7 @@ func (h *QuestionnaireAssignmentHandler) GetByID(c *gin.Context) {
 	c.JSON(http.StatusOK, assignment)
 }
 
-func (h *QuestionnaireAssignmentHandler) Close(c *gin.Context) {
+func (h *AssessmentAssignmentHandler) Close(c *gin.Context) {
 	partnerID := c.GetInt64("partner_id")
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
@@ -102,7 +102,7 @@ func (h *QuestionnaireAssignmentHandler) Close(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Assignment closed successfully"})
 }
 
-func (h *QuestionnaireAssignmentHandler) Delete(c *gin.Context) {
+func (h *AssessmentAssignmentHandler) Delete(c *gin.Context) {
 	partnerID := c.GetInt64("partner_id")
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {

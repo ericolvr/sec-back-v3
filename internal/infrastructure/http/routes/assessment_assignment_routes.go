@@ -6,18 +6,18 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type QuestionnaireAssignmentRoutes struct {
-	assignmentHandler *api.QuestionnaireAssignmentHandler
+type AssessmentAssignmentRoutes struct {
+	assignmentHandler *api.AssessmentAssignmentHandler
 }
 
-func NewQuestionnaireAssignmentRoutes(assignmentHandler *api.QuestionnaireAssignmentHandler) *QuestionnaireAssignmentRoutes {
-	return &QuestionnaireAssignmentRoutes{
+func NewAssessmentAssignmentRoutes(assignmentHandler *api.AssessmentAssignmentHandler) *AssessmentAssignmentRoutes {
+	return &AssessmentAssignmentRoutes{
 		assignmentHandler: assignmentHandler,
 	}
 }
 
-func (r *QuestionnaireAssignmentRoutes) SetupRoutes(v1 *gin.RouterGroup) {
-	assignments := v1.Group("/questionnaire-assignments")
+func (r *AssessmentAssignmentRoutes) SetupRoutes(v1 *gin.RouterGroup) {
+	assignments := v1.Group("/assessment-assignments")
 	assignments.Use(middleware.PartnerMiddleware())
 	{
 		assignments.POST("", r.assignmentHandler.Create)

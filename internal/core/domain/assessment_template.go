@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-// AssessmentTemplate representa um questionário de avaliação de riscos NR-1
+// AssessmentTemplate representa um template de avaliação de riscos NR-1
 // Anteriormente chamado de "Questionnaire"
 type AssessmentTemplate struct {
 	ID          int64     `json:"id"`

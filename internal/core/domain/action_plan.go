@@ -24,7 +24,7 @@ type ActionPlan struct {
 	ID                  int64      `json:"id"`
 	PartnerID           int64      `json:"partner_id"`
 	CompanyID           int64      `json:"company_id"`
-	QuestionnaireID     int64      `json:"questionnaire_id"`
+	TemplateID     int64      `json:"template_id"`
 	DepartmentID        int64      `json:"department_id"`
 	SnapshotID          *int64     `json:"snapshot_id"`
 	Title               string     `json:"title"`
@@ -50,7 +50,7 @@ type ActionPlanRepository interface {
 	List(ctx context.Context, partnerID int64, limit, offset int64) ([]*ActionPlan, error)
 	ListByDepartment(ctx context.Context, partnerID, departmentID int64, limit, offset int64) ([]*ActionPlan, error)
 	ListBySnapshot(ctx context.Context, partnerID, snapshotID int64, limit, offset int64) ([]*ActionPlan, error)
-	ListByQuestionnaire(ctx context.Context, partnerID, questionnaireID int64, limit, offset int64) ([]*ActionPlan, error)
+	ListByTemplate(ctx context.Context, partnerID, templateID int64, limit, offset int64) ([]*ActionPlan, error)
 	ListByStatus(ctx context.Context, partnerID int64, status string, limit, offset int64) ([]*ActionPlan, error)
 	ListByResponsible(ctx context.Context, partnerID, responsibleID int64, limit, offset int64) ([]*ActionPlan, error)
 	Update(ctx context.Context, actionPlan *ActionPlan) error
@@ -66,8 +66,8 @@ func (a *ActionPlan) Validate() error {
 		return fmt.Errorf("company_id is required")
 	}
 
-	if a.QuestionnaireID <= 0 {
-		return fmt.Errorf("questionnaire_id is required")
+	if a.TemplateID <= 0 {
+		return fmt.Errorf("template_id is required")
 	}
 
 	if a.DepartmentID <= 0 {

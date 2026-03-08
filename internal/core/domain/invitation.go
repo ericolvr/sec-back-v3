@@ -15,7 +15,7 @@ const (
 type Invitation struct {
 	ID              int64      `json:"id"`
 	PartnerID        int64      `json:"partner_id"`
-	QuestionnaireID int64      `json:"questionnaire_id"`
+	TemplateID int64      `json:"template_id"`
 	DepartmentID    int64      `json:"department_id"`
 	ResponseID      int64      `json:"response_id"`
 	EmployeeEmail   string     `json:"employee_email"`
@@ -29,11 +29,11 @@ type InvitationRepository interface {
 	Create(ctx context.Context, invitation *Invitation) error
 	GetByID(ctx context.Context, tenantID, id int64) (*Invitation, error)
 	List(ctx context.Context, tenantID, limit, offset int64) ([]*Invitation, error)
-	ListByQuestionnaireAndDepartment(ctx context.Context, tenantID, questionnaireID, departmentID int64) ([]*Invitation, error)
+	ListByTemplateAndDepartment(ctx context.Context, tenantID, templateID, departmentID int64) ([]*Invitation, error)
 	ListByStatus(ctx context.Context, tenantID int64, status string, limit, offset int64) ([]*Invitation, error)
 	Update(ctx context.Context, invitation *Invitation) error
 	Delete(ctx context.Context, tenantID, id int64) error
-	CountByQuestionnaireAndDepartment(ctx context.Context, tenantID, questionnaireID, departmentID int64) (int64, error)
+	CountByTemplateAndDepartment(ctx context.Context, tenantID, templateID, departmentID int64) (int64, error)
 }
 
 func (i *Invitation) ValidateInvitation() error {
@@ -41,8 +41,8 @@ func (i *Invitation) ValidateInvitation() error {
 		return fmt.Errorf("partner_id is required")
 	}
 
-	if i.QuestionnaireID <= 0 {
-		return fmt.Errorf("questionnaire_id is required")
+	if i.TemplateID <= 0 {
+		return fmt.Errorf("template_id is required")
 	}
 
 	if i.DepartmentID <= 0 {

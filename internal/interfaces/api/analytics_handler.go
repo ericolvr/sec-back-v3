@@ -25,7 +25,7 @@ func (h *AnalyticsHandler) CreateSnapshot(c *gin.Context) {
 	var req struct {
 		CompanyID       int64  `json:"company_id" binding:"required"`
 		DepartmentID    int64  `json:"department_id" binding:"required"`
-		QuestionnaireID int64  `json:"questionnaire_id" binding:"required"`
+		TemplateID int64  `json:"template_id" binding:"required"`
 		CreatedBy       *int64 `json:"created_by"`
 	}
 
@@ -39,7 +39,7 @@ func (h *AnalyticsHandler) CreateSnapshot(c *gin.Context) {
 		partnerID,
 		req.CompanyID,
 		req.DepartmentID,
-		req.QuestionnaireID,
+		req.TemplateID,
 		req.CreatedBy,
 	)
 
@@ -93,21 +93,21 @@ func (h *AnalyticsHandler) ListReportsByDepartment(c *gin.Context) {
 	c.JSON(http.StatusOK, reports)
 }
 
-// ListReportsByQuestionnaire lista snapshots de um questionário específico
-func (h *AnalyticsHandler) ListReportsByQuestionnaire(c *gin.Context) {
+// ListReportsByTemplate lista snapshots de um template específico
+func (h *AnalyticsHandler) ListReportsByTemplate(c *gin.Context) {
 	partnerID := c.GetInt64("partner_id")
-	questionnaireID := c.Param("questionnaire_id")
+	templateID := c.Param("template_id")
 
-	qID, err := strconv.ParseInt(questionnaireID, 10, 64)
+	qID, err := strconv.ParseInt(templateID, 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "questionnaire_id must be a valid number"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "template_id must be a valid number"})
 		return
 	}
 
 	limit, _ := strconv.ParseInt(c.DefaultQuery("limit", "50"), 10, 64)
 	offset, _ := strconv.ParseInt(c.DefaultQuery("offset", "0"), 10, 64)
 
-	reports, err := h.analyticsService.ListReportsByQuestionnaire(c.Request.Context(), partnerID, qID, limit, offset)
+	reports, err := h.analyticsService.ListReportsByTemplate(c.Request.Context(), partnerID, qID, limit, offset)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -141,10 +141,10 @@ func (h *AnalyticsHandler) ListSnapshots(c *gin.Context) {
 func (h *AnalyticsHandler) GetDepartmentReport(c *gin.Context) {
 	partnerID := c.GetInt64("partner_id")
 	departmentID := c.Param("department_id")
-	questionnaireIDStr := c.Query("questionnaire_id")
+	templateIDStr := c.Query("template_id")
 
-	if questionnaireIDStr == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "questionnaire_id is required"})
+	if templateIDStr == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "template_id is required"})
 		return
 	}
 
@@ -154,16 +154,16 @@ func (h *AnalyticsHandler) GetDepartmentReport(c *gin.Context) {
 		return
 	}
 
-	questionnaireID, err := strconv.ParseInt(questionnaireIDStr, 10, 64)
+	templateID, err := strconv.ParseInt(templateIDStr, 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "questionnaire_id must be a valid number"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "template_id must be a valid number"})
 		return
 	}
 
 	// Buscar companyID do departamento
 	companyID := int64(1) // TODO: buscar do departamento
 
-	report, err := h.analyticsService.GetDepartmentReport(c.Request.Context(), partnerID, companyID, deptID, questionnaireID)
+	report, err := h.analyticsService.GetDepartmentReport(c.Request.Context(), partnerID, companyID, deptID, templateID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -172,22 +172,22 @@ func (h *AnalyticsHandler) GetDepartmentReport(c *gin.Context) {
 	c.JSON(http.StatusOK, report)
 }
 
-// GetQuestionnaireReport retorna analytics de todos os departamentos de um questionário
-func (h *AnalyticsHandler) GetQuestionnaireReport(c *gin.Context) {
+// GetTemplateReport retorna analytics de todos os departamentos de um template
+func (h *AnalyticsHandler) GetTemplateReport(c *gin.Context) {
 	partnerID := c.GetInt64("partner_id")
-	questionnaireID := c.Param("questionnaire_id")
+	templateID := c.Param("template_id")
 
-	qID, err := strconv.ParseInt(questionnaireID, 10, 64)
+	qID, err := strconv.ParseInt(templateID, 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "questionnaire_id must be a valid number"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "template_id must be a valid number"})
 		return
 	}
 
-	// TODO: Implementar GetQuestionnaireReport no service
+	// TODO: Implementar GetTemplateReport no service
 	c.JSON(http.StatusNotImplemented, gin.H{
 		"error":            "Not implemented yet",
 		"partner_id":       partnerID,
-		"questionnaire_id": qID,
+		"template_id": qID,
 		"message":          "This endpoint will return analytics for all departments of a questionnaire",
 	})
 }

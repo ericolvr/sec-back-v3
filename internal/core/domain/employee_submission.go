@@ -13,13 +13,13 @@ const (
 	SubmissionStatusCompleted  = "completed"
 )
 
-// EmployeeSubmission representa a submissão de um questionário por um funcionário
+// EmployeeSubmission representa a submissão de um template por um funcionário
 // Anteriormente chamado de "Response"
 type EmployeeSubmission struct {
 	ID              int64      `json:"id"`
 	PartnerID       int64      `json:"partner_id"`
 	CompanyID       int64      `json:"company_id"`
-	QuestionnaireID int64      `json:"questionnaire_id"`
+	TemplateID int64      `json:"template_id"`
 	EmployeeID      int64      `json:"employee_id"`
 	DepartmentID    int64      `json:"department_id"`
 	InvitationToken string     `json:"invitation_token"`
@@ -50,8 +50,8 @@ func (s *EmployeeSubmission) Validate() error {
 	if s.EmployeeID <= 0 {
 		return fmt.Errorf("employee_id is required")
 	}
-	if s.QuestionnaireID <= 0 {
-		return fmt.Errorf("questionnaire_id is required")
+	if s.TemplateID <= 0 {
+		return fmt.Errorf("template_id is required")
 	}
 	if s.DepartmentID <= 0 {
 		return fmt.Errorf("department_id is required")

@@ -13,7 +13,7 @@ type RiskMetrics struct {
 	PartnerID       int64 `json:"partner_id"`
 	CompanyID       int64 `json:"company_id"`
 	DepartmentID    int64 `json:"department_id"`
-	QuestionnaireID int64 `json:"questionnaire_id"`
+	TemplateID int64 `json:"template_id"`
 
 	// Métricas pré-calculadas
 	TotalEmployees       int     `json:"total_employees"`
@@ -37,8 +37,8 @@ type RiskMetrics struct {
 type RiskMetricsRepository interface {
 	Create(ctx context.Context, metrics *RiskMetrics) error
 	Upsert(ctx context.Context, metrics *RiskMetrics) error // Insert or Update
-	GetByDepartment(ctx context.Context, partnerID, departmentID, questionnaireID int64) (*RiskMetrics, error)
-	GetByCompany(ctx context.Context, partnerID, companyID, questionnaireID int64) ([]*RiskMetrics, error)
+	GetByDepartment(ctx context.Context, partnerID, departmentID, templateID int64) (*RiskMetrics, error)
+	GetByCompany(ctx context.Context, partnerID, companyID, templateID int64) ([]*RiskMetrics, error)
 	List(ctx context.Context, partnerID int64, limit, offset int64) ([]*RiskMetrics, error)
 	Delete(ctx context.Context, partnerID, id int64) error
 }

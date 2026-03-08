@@ -40,7 +40,7 @@ func main() {
 	riskCategoryRepo := database.NewRiskCategoryRepository(db)
 	formulaRepo := database.NewCalculationFormulaRepository(db)
 	reportRepo := database.NewAnalyticsReportRepository(db)
-	assignmentRepo := database.NewQuestionnaireAssignmentRepository(db)
+	assignmentRepo := database.NewAssessmentAssignmentRepository(db)
 	riskMetricsRepo := database.NewRiskMetricsRepository(db)
 	versionRepo := database.NewAssessmentVersionRepository(db)
 
@@ -57,7 +57,7 @@ func main() {
 	versionService := services.NewAssessmentVersionService(versionRepo)
 	templateService := services.NewAssessmentTemplateService(templateRepo, partnerRepo, versionService)
 	submissionService := services.NewEmployeeSubmissionService(submissionRepo, employeeRepo, templateRepo)
-	assignmentService := services.NewQuestionnaireAssignmentService(assignmentRepo, departmentRepo)
+	assignmentService := services.NewAssessmentAssignmentService(assignmentRepo, departmentRepo)
 
 	// RiskMetricsService e AnalyticsService
 	riskMetricsService := services.NewRiskMetricsService(
@@ -111,7 +111,7 @@ func main() {
 	templateHandler := api.NewAssessmentTemplateHandler(templateService)
 	versionHandler := api.NewAssessmentVersionHandler(versionService)
 	submissionHandler := api.NewEmployeeSubmissionHandler(submissionService)
-	assignmentHandler := api.NewQuestionnaireAssignmentHandler(assignmentService)
+	assignmentHandler := api.NewAssessmentAssignmentHandler(assignmentService)
 
 	// Routes
 	router := httpServer.NewRouter()
@@ -127,7 +127,7 @@ func main() {
 	router.PartnerRoutes = routes.NewPartnerRoutes(partnerHandler)
 	router.AssessmentTemplateRoutes = routes.NewAssessmentTemplateRoutes(templateHandler, versionHandler, questionHandler)
 	router.EmployeeSubmissionRoutes = routes.NewEmployeeSubmissionRoutes(submissionHandler)
-	router.QuestionnaireAssignmentRoutes = routes.NewQuestionnaireAssignmentRoutes(assignmentHandler)
+	router.AssessmentAssignmentRoutes = routes.NewAssessmentAssignmentRoutes(assignmentHandler)
 
 	port := os.Getenv("PORT")
 	if port == "" {

@@ -60,7 +60,7 @@ func (r *QuestionRepository) Create(ctx context.Context, question *domain.Questi
 	return err
 }
 
-func (r *QuestionRepository) List(ctx context.Context, tenantID, questionnaireID, limit, offset int64) ([]*domain.Question, error) {
+func (r *QuestionRepository) List(ctx context.Context, tenantID, templateID, limit, offset int64) ([]*domain.Question, error) {
 	query := `
 		SELECT 
 			q.id,
@@ -87,7 +87,7 @@ func (r *QuestionRepository) List(ctx context.Context, tenantID, questionnaireID
 		ORDER BY q.order_num ASC
 		LIMIT $3 OFFSET $4`
 
-	rows, err := r.db.QueryContext(ctx, query, tenantID, questionnaireID, limit, offset)
+	rows, err := r.db.QueryContext(ctx, query, tenantID, templateID, limit, offset)
 	if err != nil {
 		return nil, err
 	}

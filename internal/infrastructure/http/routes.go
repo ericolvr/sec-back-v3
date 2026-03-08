@@ -25,7 +25,7 @@ type Router struct {
 	RiskMetricsRoutes             RouteSetup
 	AnalyticsRoutes               RouteSetup
 	ActionPlanRoutes              RouteSetup
-	QuestionnaireAssignmentRoutes RouteSetup
+	AssessmentAssignmentRoutes RouteSetup
 }
 
 func NewRouter() *Router {
@@ -87,8 +87,8 @@ func (r *Router) SetupRoutes(engine *gin.Engine) {
 		if r.ActionPlanRoutes != nil {
 			r.ActionPlanRoutes.SetupRoutes(v1)
 		}
-		if r.QuestionnaireAssignmentRoutes != nil {
-			r.QuestionnaireAssignmentRoutes.SetupRoutes(v1)
+		if r.AssessmentAssignmentRoutes != nil {
+			r.AssessmentAssignmentRoutes.SetupRoutes(v1)
 		}
 	}
 }

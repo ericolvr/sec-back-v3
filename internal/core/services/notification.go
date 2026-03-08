@@ -24,7 +24,7 @@ func NewNotificationService(
 }
 
 // CreateThresholdReached cria notificação quando threshold é atingido
-func (s *NotificationService) CreateThresholdReached(ctx context.Context, partnerID, companyID, departmentID, questionnaireID int64, responseRate float64, departmentName string) error {
+func (s *NotificationService) CreateThresholdReached(ctx context.Context, partnerID, companyID, departmentID, templateID int64, responseRate float64, departmentName string) error {
 	settings, err := s.settingsRepo.GetByPartnerID(ctx, partnerID)
 	if err != nil || !settings.NotifyOnThreshold {
 		return nil // Não notifica se configuração desabilitada
@@ -40,7 +40,7 @@ func (s *NotificationService) CreateThresholdReached(ctx context.Context, partne
 		PartnerID:       partnerID,
 		CompanyID:       &companyID,
 		DepartmentID:    &departmentID,
-		QuestionnaireID: &questionnaireID,
+		TemplateID: &templateID,
 		Type:            domain.NotificationTypeThresholdReached,
 		Title:           fmt.Sprintf("Departamento %s atingiu %.0f%% de resposta", departmentName, responseRate),
 		Message:         fmt.Sprintf("O departamento %s atingiu %.1f%% de taxa de resposta. Você pode fechar a coleta agora.", departmentName, responseRate),
@@ -56,7 +56,7 @@ func (s *NotificationService) CreateThresholdReached(ctx context.Context, partne
 }
 
 // CreateCanClose cria notificação quando departamento pode ser fechado
-func (s *NotificationService) CreateCanClose(ctx context.Context, partnerID, companyID, departmentID, questionnaireID int64, departmentName string, responseRate float64) error {
+func (s *NotificationService) CreateCanClose(ctx context.Context, partnerID, companyID, departmentID, templateID int64, departmentName string, responseRate float64) error {
 	metadata := map[string]interface{}{
 		"response_rate": responseRate,
 		"can_close":     true,
@@ -67,7 +67,7 @@ func (s *NotificationService) CreateCanClose(ctx context.Context, partnerID, com
 		PartnerID:       partnerID,
 		CompanyID:       &companyID,
 		DepartmentID:    &departmentID,
-		QuestionnaireID: &questionnaireID,
+		TemplateID: &templateID,
 		Type:            domain.NotificationTypeCanClose,
 		Title:           fmt.Sprintf("Departamento %s pronto para encerramento", departmentName),
 		Message:         fmt.Sprintf("O departamento %s atingiu os critérios necessários (%.1f%% de resposta). Você pode fechar a coleta e gerar o relatório.", departmentName, responseRate),
@@ -83,7 +83,7 @@ func (s *NotificationService) CreateCanClose(ctx context.Context, partnerID, com
 }
 
 // CreateRiskDetected cria notificação quando risco alto é detectado
-func (s *NotificationService) CreateRiskDetected(ctx context.Context, partnerID, companyID, departmentID, questionnaireID int64, departmentName, category, riskLevel string, averageScore float64) error {
+func (s *NotificationService) CreateRiskDetected(ctx context.Context, partnerID, companyID, departmentID, templateID int64, departmentName, category, riskLevel string, averageScore float64) error {
 	severity := domain.NotificationSeverityWarning
 	if riskLevel == "high" {
 		severity = domain.NotificationSeverityCritical
@@ -100,7 +100,7 @@ func (s *NotificationService) CreateRiskDetected(ctx context.Context, partnerID,
 		PartnerID:       partnerID,
 		CompanyID:       &companyID,
 		DepartmentID:    &departmentID,
-		QuestionnaireID: &questionnaireID,
+		TemplateID: &templateID,
 		Type:            domain.NotificationTypeRiskDetected,
 		Title:           fmt.Sprintf("⚠️ Risco %s detectado em %s - %s", riskLevel, category, departmentName),
 		Message:         fmt.Sprintf("Foi detectado risco %s na categoria %s do departamento %s (score médio: %.2f). Ações corretivas são recomendadas.", riskLevel, category, departmentName, averageScore),
@@ -116,7 +116,7 @@ func (s *NotificationService) CreateRiskDetected(ctx context.Context, partnerID,
 }
 
 // CreateSnapshotCreated cria notificação quando snapshot é gerado
-func (s *NotificationService) CreateSnapshotCreated(ctx context.Context, partnerID, companyID, departmentID, questionnaireID, snapshotID int64, departmentName string) error {
+func (s *NotificationService) CreateSnapshotCreated(ctx context.Context, partnerID, companyID, departmentID, templateID, snapshotID int64, departmentName string) error {
 	metadata := map[string]interface{}{
 		"snapshot_id": snapshotID,
 	}
@@ -126,7 +126,7 @@ func (s *NotificationService) CreateSnapshotCreated(ctx context.Context, partner
 		PartnerID:       partnerID,
 		CompanyID:       &companyID,
 		DepartmentID:    &departmentID,
-		QuestionnaireID: &questionnaireID,
+		TemplateID: &templateID,
 		Type:            domain.NotificationTypeSnapshotCreated,
 		Title:           fmt.Sprintf("✅ Snapshot gerado para %s", departmentName),
 		Message:         fmt.Sprintf("O snapshot do departamento %s foi criado com sucesso. Os dados foram congelados e o relatório está disponível.", departmentName),
@@ -142,7 +142,7 @@ func (s *NotificationService) CreateSnapshotCreated(ctx context.Context, partner
 }
 
 // CreateActionPlanGenerated cria notificação quando action plan é auto-gerado
-func (s *NotificationService) CreateActionPlanGenerated(ctx context.Context, partnerID, companyID, departmentID, questionnaireID, actionPlanID int64, title string) error {
+func (s *NotificationService) CreateActionPlanGenerated(ctx context.Context, partnerID, companyID, departmentID, templateID, actionPlanID int64, title string) error {
 	metadata := map[string]interface{}{
 		"action_plan_id": actionPlanID,
 	}
@@ -152,7 +152,7 @@ func (s *NotificationService) CreateActionPlanGenerated(ctx context.Context, par
 		PartnerID:       partnerID,
 		CompanyID:       &companyID,
 		DepartmentID:    &departmentID,
-		QuestionnaireID: &questionnaireID,
+		TemplateID: &templateID,
 		Type:            domain.NotificationTypeActionPlanCreated,
 		Title:           "Plano de ação criado automaticamente",
 		Message:         fmt.Sprintf("Um novo plano de ação foi gerado automaticamente: %s", title),

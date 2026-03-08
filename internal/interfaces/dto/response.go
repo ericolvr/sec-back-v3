@@ -1,7 +1,7 @@
 package dto
 
 type ResponseRequest struct {
-	QuestionnaireID int64  `json:"questionnaire_id" binding:"required"`
+	TemplateID int64  `json:"template_id" binding:"required"`
 	InvitationToken string `json:"invitation_token" binding:"required"`
 	CompanyID       int64  `json:"company_id" binding:"required"`
 	DepartmentID    int64  `json:"department_id" binding:"required"`
@@ -11,7 +11,7 @@ type ResponseRequest struct {
 type ResponseResponse struct {
 	ID              int64  `json:"id"`
 	PartnerID    int64  `json:"partner_id"`
-	QuestionnaireID int64  `json:"questionnaire_id"`
+	TemplateID int64  `json:"template_id"`
 	InvitationToken string `json:"invitation_token"`
 	CompanyID       int64  `json:"company_id"`
 	DepartmentID    int64  `json:"department_id"`

@@ -40,7 +40,7 @@ func (r *AnswerRepository) List(ctx context.Context, tenantID, responseID, limit
 		SELECT 
 			a.id, a.partner_id, a.submission_id, a.question_id, 
 			a.value, a.score, a.created_at, a.updated_at,
-			q.id, q.partner_id, q.questionnaire_id, q.question, 
+			q.id, q.partner_id, q.template_id, q.question, 
 			q.type, q.options, q.score_values, q.weight, 
 			q.required, q.order_num, q.created_at, q.updated_at
 		FROM answers a
@@ -97,7 +97,7 @@ func (r *AnswerRepository) GetByID(ctx context.Context, tenantID, id int64) (*do
 		SELECT 
 			a.id, a.partner_id, a.submission_id, a.question_id, 
 			a.value, a.score, a.created_at, a.updated_at,
-			q.id, q.partner_id, q.questionnaire_id, q.question, 
+			q.id, q.partner_id, q.template_id, q.question, 
 			q.type, q.options, q.score_values, q.weight, 
 			q.required, q.order_num, q.created_at, q.updated_at
 		FROM answers a

@@ -34,7 +34,7 @@ func NewActionPlanService(
 // Chamado após criar um snapshot com risk_categories
 func (s *ActionPlanService) AutoGenerateFromRiskCategories(
 	ctx context.Context,
-	partnerID, companyID, departmentID, questionnaireID, snapshotID int64,
+	partnerID, companyID, departmentID, templateID, snapshotID int64,
 ) ([]*domain.ActionPlan, error) {
 
 	// Buscar categorias de risco do snapshot
@@ -69,7 +69,7 @@ func (s *ActionPlanService) AutoGenerateFromRiskCategories(
 					partnerID,
 					companyID,
 					departmentID,
-					questionnaireID,
+					templateID,
 					snapshotID,
 					department.Name,
 				)
@@ -126,7 +126,7 @@ func (s *ActionPlanService) ListByStatus(ctx context.Context, partnerID int64, s
 func (s *ActionPlanService) createFromTemplate(
 	template *domain.ActionPlanTemplate,
 	riskCat *domain.RiskCategory,
-	partnerID, companyID, departmentID, questionnaireID, snapshotID int64,
+	partnerID, companyID, departmentID, templateID, snapshotID int64,
 	departmentName string,
 ) *domain.ActionPlan {
 
@@ -140,7 +140,7 @@ func (s *ActionPlanService) createFromTemplate(
 	return &domain.ActionPlan{
 		PartnerID:       partnerID,
 		CompanyID:       companyID,
-		QuestionnaireID: questionnaireID,
+		TemplateID: templateID,
 		DepartmentID:    departmentID,
 		SnapshotID:      &snapshotID,
 		Title:           title,

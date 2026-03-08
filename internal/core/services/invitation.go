@@ -45,8 +45,8 @@ func (s *InvitationService) List(ctx context.Context, partnerID, limit, offset i
 	return s.invitationRepo.List(ctx, partnerID, limit, offset)
 }
 
-func (s *InvitationService) ListByQuestionnaireAndDepartment(ctx context.Context, partnerID, questionnaireID, departmentID int64) ([]*domain.Invitation, error) {
-	return s.invitationRepo.ListByQuestionnaireAndDepartment(ctx, partnerID, questionnaireID, departmentID)
+func (s *InvitationService) ListByTemplateAndDepartment(ctx context.Context, partnerID, templateID, departmentID int64) ([]*domain.Invitation, error) {
+	return s.invitationRepo.ListByTemplateAndDepartment(ctx, partnerID, templateID, departmentID)
 }
 
 func (s *InvitationService) MarkAsSent(ctx context.Context, partnerID, id int64) error {

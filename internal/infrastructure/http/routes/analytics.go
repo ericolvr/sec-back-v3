@@ -21,13 +21,13 @@ func (r *AnalyticsRoutes) SetupRoutes(v1 *gin.RouterGroup) {
 	analytics.Use(middleware.PartnerMiddleware())
 	{
 		// Real-time analytics
-		analytics.GET("/questionnaire/:questionnaire_id", r.analyticsHandler.GetQuestionnaireReport)
+		analytics.GET("/questionnaire/:template_id", r.analyticsHandler.GetTemplateReport)
 		analytics.GET("/department/:department_id", r.analyticsHandler.GetDepartmentReport)
 
 		// Snapshot/Reports (department-based)
 		analytics.POST("/department/:department_id/snapshot", r.analyticsHandler.CreateSnapshot)
 		analytics.GET("/department/:department_id/reports", r.analyticsHandler.ListReportsByDepartment)
-		analytics.GET("/questionnaire/:questionnaire_id/reports", r.analyticsHandler.ListReportsByQuestionnaire)
+		analytics.GET("/questionnaire/:template_id/reports", r.analyticsHandler.ListReportsByTemplate)
 		analytics.GET("/reports", r.analyticsHandler.ListReports)
 		analytics.GET("/snapshots", r.analyticsHandler.ListSnapshots)
 		analytics.GET("/snapshots/:id", r.analyticsHandler.GetSnapshot)

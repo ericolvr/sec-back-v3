@@ -19,7 +19,7 @@ func NewActionPlanRepository(db *sql.DB) *ActionPlanRepository {
 func (r *ActionPlanRepository) Create(ctx context.Context, actionPlan *domain.ActionPlan) error {
 	query := `
 		INSERT INTO action_plans (
-			partner_id, company_id, questionnaire_id, department_id, snapshot_id,
+			partner_id, company_id, template_id, department_id, snapshot_id,
 			title, description, risk_level, priority, category,
 			responsible_name, responsible_id, status, due_date,
 			evidence_urls, notes, created_at, updated_at
@@ -32,7 +32,7 @@ func (r *ActionPlanRepository) Create(ctx context.Context, actionPlan *domain.Ac
 		ctx, query,
 		actionPlan.PartnerID,
 		actionPlan.CompanyID,
-		actionPlan.QuestionnaireID,
+		actionPlan.TemplateID,
 		actionPlan.DepartmentID,
 		actionPlan.SnapshotID,
 		actionPlan.Title,
@@ -51,7 +51,7 @@ func (r *ActionPlanRepository) Create(ctx context.Context, actionPlan *domain.Ac
 
 func (r *ActionPlanRepository) GetByID(ctx context.Context, partnerID, id int64) (*domain.ActionPlan, error) {
 	query := `
-		SELECT id, partner_id, company_id, questionnaire_id, department_id, snapshot_id,
+		SELECT id, partner_id, company_id, template_id, department_id, snapshot_id,
 			   title, description, risk_level, priority, category,
 			   responsible_name, responsible_id, status, due_date, completed_at,
 			   evidence_urls, notes, created_at, updated_at
@@ -62,7 +62,7 @@ func (r *ActionPlanRepository) GetByID(ctx context.Context, partnerID, id int64)
 	var evidenceJSON []byte
 
 	err := r.db.QueryRowContext(ctx, query, partnerID, id).Scan(
-		&ap.ID, &ap.PartnerID, &ap.CompanyID, &ap.QuestionnaireID, &ap.DepartmentID, &ap.SnapshotID,
+		&ap.ID, &ap.PartnerID, &ap.CompanyID, &ap.TemplateID, &ap.DepartmentID, &ap.SnapshotID,
 		&ap.Title, &ap.Description, &ap.RiskLevel, &ap.Priority, &ap.Category,
 		&ap.ResponsibleName, &ap.ResponsibleID, &ap.Status, &ap.DueDate, &ap.CompletedAt,
 		&evidenceJSON, &ap.Notes, &ap.CreatedAt, &ap.UpdatedAt,
@@ -81,7 +81,7 @@ func (r *ActionPlanRepository) GetByID(ctx context.Context, partnerID, id int64)
 
 func (r *ActionPlanRepository) List(ctx context.Context, partnerID, limit, offset int64) ([]*domain.ActionPlan, error) {
 	query := `
-		SELECT id, partner_id, company_id, questionnaire_id, department_id, snapshot_id,
+		SELECT id, partner_id, company_id, template_id, department_id, snapshot_id,
 			   title, description, risk_level, priority, category,
 			   responsible_name, responsible_id, status, due_date, completed_at,
 			   evidence_urls, notes, created_at, updated_at
@@ -101,7 +101,7 @@ func (r *ActionPlanRepository) List(ctx context.Context, partnerID, limit, offse
 
 func (r *ActionPlanRepository) ListByDepartment(ctx context.Context, partnerID, departmentID, limit, offset int64) ([]*domain.ActionPlan, error) {
 	query := `
-		SELECT id, partner_id, company_id, questionnaire_id, department_id, snapshot_id,
+		SELECT id, partner_id, company_id, template_id, department_id, snapshot_id,
 			   title, description, risk_level, priority, category,
 			   responsible_name, responsible_id, status, due_date, completed_at,
 			   evidence_urls, notes, created_at, updated_at
@@ -121,7 +121,7 @@ func (r *ActionPlanRepository) ListByDepartment(ctx context.Context, partnerID, 
 
 func (r *ActionPlanRepository) ListBySnapshot(ctx context.Context, partnerID, snapshotID, limit, offset int64) ([]*domain.ActionPlan, error) {
 	query := `
-		SELECT id, partner_id, company_id, questionnaire_id, department_id, snapshot_id,
+		SELECT id, partner_id, company_id, template_id, department_id, snapshot_id,
 			   title, description, risk_level, priority, category,
 			   responsible_name, responsible_id, status, due_date, completed_at,
 			   evidence_urls, notes, created_at, updated_at
@@ -160,17 +160,17 @@ func (r *ActionPlanRepository) Update(ctx context.Context, actionPlan *domain.Ac
 	return err
 }
 
-func (r *ActionPlanRepository) ListByQuestionnaire(ctx context.Context, partnerID, questionnaireID int64, limit, offset int64) ([]*domain.ActionPlan, error) {
+func (r *ActionPlanRepository) ListByTemplate(ctx context.Context, partnerID, templateID int64, limit, offset int64) ([]*domain.ActionPlan, error) {
 	query := `
-		SELECT id, partner_id, company_id, questionnaire_id, department_id, snapshot_id,
+		SELECT id, partner_id, company_id, template_id, department_id, snapshot_id,
 			   title, description, risk_level, priority, category, responsible_name, responsible_id,
 			   status, due_date, completed_at, evidence_urls, notes, created_at, updated_at
 		FROM action_plans
-		WHERE partner_id = $1 AND questionnaire_id = $2
+		WHERE partner_id = $1 AND template_id = $2
 		ORDER BY created_at DESC
 		LIMIT $3 OFFSET $4`
 
-	rows, err := r.db.QueryContext(ctx, query, partnerID, questionnaireID, limit, offset)
+	rows, err := r.db.QueryContext(ctx, query, partnerID, templateID, limit, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -181,7 +181,7 @@ func (r *ActionPlanRepository) ListByQuestionnaire(ctx context.Context, partnerI
 
 func (r *ActionPlanRepository) ListByResponsible(ctx context.Context, partnerID, responsibleID int64, limit, offset int64) ([]*domain.ActionPlan, error) {
 	query := `
-		SELECT id, partner_id, company_id, questionnaire_id, department_id, snapshot_id,
+		SELECT id, partner_id, company_id, template_id, department_id, snapshot_id,
 			   title, description, risk_level, priority, category, responsible_name, responsible_id,
 			   status, due_date, completed_at, evidence_urls, notes, created_at, updated_at
 		FROM action_plans
@@ -200,7 +200,7 @@ func (r *ActionPlanRepository) ListByResponsible(ctx context.Context, partnerID,
 
 func (r *ActionPlanRepository) ListByStatus(ctx context.Context, partnerID int64, status string, limit, offset int64) ([]*domain.ActionPlan, error) {
 	query := `
-		SELECT id, partner_id, company_id, questionnaire_id, department_id, snapshot_id,
+		SELECT id, partner_id, company_id, template_id, department_id, snapshot_id,
 			   title, description, risk_level, priority, category, responsible_name, responsible_id,
 			   status, due_date, completed_at, evidence_urls, notes, created_at, updated_at
 		FROM action_plans
@@ -231,7 +231,7 @@ func (r *ActionPlanRepository) scanActionPlans(rows *sql.Rows) ([]*domain.Action
 		var evidenceJSON []byte
 
 		err := rows.Scan(
-			&ap.ID, &ap.PartnerID, &ap.CompanyID, &ap.QuestionnaireID, &ap.DepartmentID, &ap.SnapshotID,
+			&ap.ID, &ap.PartnerID, &ap.CompanyID, &ap.TemplateID, &ap.DepartmentID, &ap.SnapshotID,
 			&ap.Title, &ap.Description, &ap.RiskLevel, &ap.Priority, &ap.Category,
 			&ap.ResponsibleName, &ap.ResponsibleID, &ap.Status, &ap.DueDate, &ap.CompletedAt,
 			&evidenceJSON, &ap.Notes, &ap.CreatedAt, &ap.UpdatedAt,

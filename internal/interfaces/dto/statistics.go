@@ -2,8 +2,8 @@ package dto
 
 import "time"
 
-// QuestionnaireRiskOverviewResponse represents a questionnaire with aggregated risk statistics
-type QuestionnaireRiskOverviewResponse struct {
+// TemplateRiskOverviewResponse represents a questionnaire with aggregated risk statistics
+type TemplateRiskOverviewResponse struct {
 	// Basic Information
 	ID          int64  `json:"id"`
 	Name        string `json:"name"`
@@ -31,8 +31,8 @@ type QuestionnaireRiskOverviewResponse struct {
 	LastUpdated       *time.Time `json:"last_updated,omitempty"`
 }
 
-// QuestionnaireInProgressResponse represents a questionnaire in progress with completion metrics
-type QuestionnaireInProgressResponse struct {
+// TemplateInProgressResponse represents a questionnaire in progress with completion metrics
+type TemplateInProgressResponse struct {
 	// Basic Information
 	ID                 int64     `json:"id"`
 	Name               string    `json:"name"`

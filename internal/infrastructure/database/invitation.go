@@ -18,7 +18,7 @@ func NewInvitationRepository(db *sql.DB) *InvitationRepository {
 func (r *InvitationRepository) Create(ctx context.Context, invitation *domain.Invitation) error {
 	query := `
 		INSERT INTO invitations (
-			partner_id, employee_id, questionnaire_id, department_id, 
+			partner_id, employee_id, template_id, department_id, 
 			token, sent, sent_at, created_at
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
 		RETURNING id, created_at`
@@ -27,7 +27,7 @@ func (r *InvitationRepository) Create(ctx context.Context, invitation *domain.In
 		ctx, query,
 		invitation.PartnerID,
 		invitation.ResponseID, // employee_id
-		invitation.QuestionnaireID,
+		invitation.TemplateID,
 		invitation.DepartmentID,
 		invitation.EmployeeEmail, // token
 		invitation.Status == domain.InvitationStatusSent,
@@ -37,7 +37,7 @@ func (r *InvitationRepository) Create(ctx context.Context, invitation *domain.In
 
 func (r *InvitationRepository) GetByID(ctx context.Context, partnerID, id int64) (*domain.Invitation, error) {
 	query := `
-		SELECT id, partner_id, employee_id, questionnaire_id, department_id,
+		SELECT id, partner_id, employee_id, template_id, department_id,
 			   token, sent, sent_at, created_at
 		FROM invitations
 		WHERE partner_id = $1 AND id = $2`
@@ -46,7 +46,7 @@ func (r *InvitationRepository) GetByID(ctx context.Context, partnerID, id int64)
 	var sent bool
 
 	err := r.db.QueryRowContext(ctx, query, partnerID, id).Scan(
-		&inv.ID, &inv.PartnerID, &inv.ResponseID, &inv.QuestionnaireID, &inv.DepartmentID,
+		&inv.ID, &inv.PartnerID, &inv.ResponseID, &inv.TemplateID, &inv.DepartmentID,
 		&inv.EmployeeEmail, &sent, &inv.SentAt, &inv.CreatedAt,
 	)
 
@@ -65,7 +65,7 @@ func (r *InvitationRepository) GetByID(ctx context.Context, partnerID, id int64)
 
 func (r *InvitationRepository) List(ctx context.Context, partnerID, limit, offset int64) ([]*domain.Invitation, error) {
 	query := `
-		SELECT id, partner_id, employee_id, questionnaire_id, department_id,
+		SELECT id, partner_id, employee_id, template_id, department_id,
 			   token, sent, sent_at, created_at
 		FROM invitations
 		WHERE partner_id = $1
@@ -81,15 +81,15 @@ func (r *InvitationRepository) List(ctx context.Context, partnerID, limit, offse
 	return r.scanInvitations(rows)
 }
 
-func (r *InvitationRepository) ListByQuestionnaireAndDepartment(ctx context.Context, partnerID, questionnaireID, departmentID int64) ([]*domain.Invitation, error) {
+func (r *InvitationRepository) ListByTemplateAndDepartment(ctx context.Context, partnerID, templateID, departmentID int64) ([]*domain.Invitation, error) {
 	query := `
-		SELECT id, partner_id, employee_id, questionnaire_id, department_id,
+		SELECT id, partner_id, employee_id, template_id, department_id,
 			   token, sent, sent_at, created_at
 		FROM invitations
-		WHERE partner_id = $1 AND questionnaire_id = $2 AND department_id = $3
+		WHERE partner_id = $1 AND template_id = $2 AND department_id = $3
 		ORDER BY created_at DESC`
 
-	rows, err := r.db.QueryContext(ctx, query, partnerID, questionnaireID, departmentID)
+	rows, err := r.db.QueryContext(ctx, query, partnerID, templateID, departmentID)
 	if err != nil {
 		return nil, err
 	}
@@ -102,7 +102,7 @@ func (r *InvitationRepository) ListByStatus(ctx context.Context, partnerID int64
 	sent := status == domain.InvitationStatusSent
 
 	query := `
-		SELECT id, partner_id, employee_id, questionnaire_id, department_id,
+		SELECT id, partner_id, employee_id, template_id, department_id,
 			   token, sent, sent_at, created_at
 		FROM invitations
 		WHERE partner_id = $1 AND sent = $2
@@ -136,14 +136,14 @@ func (r *InvitationRepository) Delete(ctx context.Context, partnerID, id int64) 
 	return err
 }
 
-func (r *InvitationRepository) CountByQuestionnaireAndDepartment(ctx context.Context, partnerID, questionnaireID, departmentID int64) (int64, error) {
+func (r *InvitationRepository) CountByTemplateAndDepartment(ctx context.Context, partnerID, templateID, departmentID int64) (int64, error) {
 	query := `
 		SELECT COUNT(*) 
 		FROM invitations 
-		WHERE partner_id = $1 AND questionnaire_id = $2 AND department_id = $3`
+		WHERE partner_id = $1 AND template_id = $2 AND department_id = $3`
 
 	var count int64
-	err := r.db.QueryRowContext(ctx, query, partnerID, questionnaireID, departmentID).Scan(&count)
+	err := r.db.QueryRowContext(ctx, query, partnerID, templateID, departmentID).Scan(&count)
 	return count, err
 }
 
@@ -155,7 +155,7 @@ func (r *InvitationRepository) scanInvitations(rows *sql.Rows) ([]*domain.Invita
 		var sent bool
 
 		err := rows.Scan(
-			&inv.ID, &inv.PartnerID, &inv.ResponseID, &inv.QuestionnaireID, &inv.DepartmentID,
+			&inv.ID, &inv.PartnerID, &inv.ResponseID, &inv.TemplateID, &inv.DepartmentID,
 			&inv.EmployeeEmail, &sent, &inv.SentAt, &inv.CreatedAt,
 		)
 

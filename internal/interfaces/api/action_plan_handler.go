@@ -25,7 +25,7 @@ func (h *ActionPlanHandler) Create(c *gin.Context) {
 
 	var req struct {
 		CompanyID       int64    `json:"company_id" binding:"required"`
-		QuestionnaireID int64    `json:"questionnaire_id" binding:"required"`
+		TemplateID int64    `json:"template_id" binding:"required"`
 		DepartmentID    int64    `json:"department_id" binding:"required"`
 		SnapshotID      *int64   `json:"snapshot_id"`
 		Title           string   `json:"title" binding:"required"`
@@ -63,7 +63,7 @@ func (h *ActionPlanHandler) Create(c *gin.Context) {
 	actionPlan := &domain.ActionPlan{
 		PartnerID:       partnerID,
 		CompanyID:       req.CompanyID,
-		QuestionnaireID: req.QuestionnaireID,
+		TemplateID: req.TemplateID,
 		DepartmentID:    req.DepartmentID,
 		SnapshotID:      req.SnapshotID,
 		Title:           req.Title,

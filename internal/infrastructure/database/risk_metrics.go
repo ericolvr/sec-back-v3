@@ -18,7 +18,7 @@ func NewRiskMetricsRepository(db *sql.DB) *RiskMetricsRepository {
 func (r *RiskMetricsRepository) Create(ctx context.Context, metrics *domain.RiskMetrics) error {
 	query := `
 		INSERT INTO risk_metrics (
-			partner_id, company_id, department_id, questionnaire_id,
+			partner_id, company_id, department_id, template_id,
 			total_employees, total_submissions, completed_submissions,
 			response_rate, average_score, risk_level, reliability, can_calculate_risk,
 			category_scores, calculated_at, created_at, updated_at
@@ -27,7 +27,7 @@ func (r *RiskMetricsRepository) Create(ctx context.Context, metrics *domain.Risk
 		RETURNING id, calculated_at, created_at, updated_at
 	`
 	err := r.db.QueryRowContext(ctx, query,
-		metrics.PartnerID, metrics.CompanyID, metrics.DepartmentID, metrics.QuestionnaireID,
+		metrics.PartnerID, metrics.CompanyID, metrics.DepartmentID, metrics.TemplateID,
 		metrics.TotalEmployees, metrics.TotalSubmissions, metrics.CompletedSubmissions,
 		metrics.ResponseRate, metrics.AverageScore, metrics.RiskLevel, metrics.Reliability, metrics.CanCalculateRisk,
 		metrics.CategoryScores,
@@ -38,13 +38,13 @@ func (r *RiskMetricsRepository) Create(ctx context.Context, metrics *domain.Risk
 func (r *RiskMetricsRepository) Upsert(ctx context.Context, metrics *domain.RiskMetrics) error {
 	query := `
 		INSERT INTO risk_metrics (
-			partner_id, company_id, department_id, questionnaire_id,
+			partner_id, company_id, department_id, template_id,
 			total_employees, total_submissions, completed_submissions,
 			response_rate, average_score, risk_level, reliability, can_calculate_risk,
 			category_scores, calculated_at, created_at, updated_at
 		)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-		ON CONFLICT (partner_id, company_id, department_id, questionnaire_id)
+		ON CONFLICT (partner_id, company_id, department_id, template_id)
 		DO UPDATE SET
 			total_employees = EXCLUDED.total_employees,
 			total_submissions = EXCLUDED.total_submissions,
@@ -60,7 +60,7 @@ func (r *RiskMetricsRepository) Upsert(ctx context.Context, metrics *domain.Risk
 		RETURNING id, calculated_at, created_at, updated_at
 	`
 	err := r.db.QueryRowContext(ctx, query,
-		metrics.PartnerID, metrics.CompanyID, metrics.DepartmentID, metrics.QuestionnaireID,
+		metrics.PartnerID, metrics.CompanyID, metrics.DepartmentID, metrics.TemplateID,
 		metrics.TotalEmployees, metrics.TotalSubmissions, metrics.CompletedSubmissions,
 		metrics.ResponseRate, metrics.AverageScore, metrics.RiskLevel, metrics.Reliability, metrics.CanCalculateRisk,
 		metrics.CategoryScores,
@@ -68,18 +68,18 @@ func (r *RiskMetricsRepository) Upsert(ctx context.Context, metrics *domain.Risk
 	return err
 }
 
-func (r *RiskMetricsRepository) GetByDepartment(ctx context.Context, partnerID, departmentID, questionnaireID int64) (*domain.RiskMetrics, error) {
+func (r *RiskMetricsRepository) GetByDepartment(ctx context.Context, partnerID, departmentID, templateID int64) (*domain.RiskMetrics, error) {
 	query := `
-		SELECT id, partner_id, company_id, department_id, questionnaire_id,
+		SELECT id, partner_id, company_id, department_id, template_id,
 			   total_employees, total_submissions, completed_submissions,
 			   response_rate, average_score, risk_level, reliability, can_calculate_risk,
 			   category_scores, calculated_at, created_at, updated_at
 		FROM risk_metrics
-		WHERE partner_id = $1 AND department_id = $2 AND questionnaire_id = $3
+		WHERE partner_id = $1 AND department_id = $2 AND template_id = $3
 	`
 	var m domain.RiskMetrics
-	err := r.db.QueryRowContext(ctx, query, partnerID, departmentID, questionnaireID).Scan(
-		&m.ID, &m.PartnerID, &m.CompanyID, &m.DepartmentID, &m.QuestionnaireID,
+	err := r.db.QueryRowContext(ctx, query, partnerID, departmentID, templateID).Scan(
+		&m.ID, &m.PartnerID, &m.CompanyID, &m.DepartmentID, &m.TemplateID,
 		&m.TotalEmployees, &m.TotalSubmissions, &m.CompletedSubmissions,
 		&m.ResponseRate, &m.AverageScore, &m.RiskLevel, &m.Reliability, &m.CanCalculateRisk,
 		&m.CategoryScores, &m.CalculatedAt, &m.CreatedAt, &m.UpdatedAt)
@@ -89,17 +89,17 @@ func (r *RiskMetricsRepository) GetByDepartment(ctx context.Context, partnerID, 
 	return &m, nil
 }
 
-func (r *RiskMetricsRepository) GetByCompany(ctx context.Context, partnerID, companyID, questionnaireID int64) ([]*domain.RiskMetrics, error) {
+func (r *RiskMetricsRepository) GetByCompany(ctx context.Context, partnerID, companyID, templateID int64) ([]*domain.RiskMetrics, error) {
 	query := `
-		SELECT id, partner_id, company_id, department_id, questionnaire_id,
+		SELECT id, partner_id, company_id, department_id, template_id,
 			   total_employees, total_submissions, completed_submissions,
 			   response_rate, average_score, risk_level, reliability, can_calculate_risk,
 			   category_scores, calculated_at, created_at, updated_at
 		FROM risk_metrics
-		WHERE partner_id = $1 AND company_id = $2 AND questionnaire_id = $3
+		WHERE partner_id = $1 AND company_id = $2 AND template_id = $3
 		ORDER BY department_id ASC
 	`
-	rows, err := r.db.QueryContext(ctx, query, partnerID, companyID, questionnaireID)
+	rows, err := r.db.QueryContext(ctx, query, partnerID, companyID, templateID)
 	if err != nil {
 		return nil, err
 	}
@@ -109,7 +109,7 @@ func (r *RiskMetricsRepository) GetByCompany(ctx context.Context, partnerID, com
 	for rows.Next() {
 		var m domain.RiskMetrics
 		err := rows.Scan(
-			&m.ID, &m.PartnerID, &m.CompanyID, &m.DepartmentID, &m.QuestionnaireID,
+			&m.ID, &m.PartnerID, &m.CompanyID, &m.DepartmentID, &m.TemplateID,
 			&m.TotalEmployees, &m.TotalSubmissions, &m.CompletedSubmissions,
 			&m.ResponseRate, &m.AverageScore, &m.RiskLevel, &m.Reliability, &m.CanCalculateRisk,
 			&m.CategoryScores, &m.CalculatedAt, &m.CreatedAt, &m.UpdatedAt)
@@ -123,7 +123,7 @@ func (r *RiskMetricsRepository) GetByCompany(ctx context.Context, partnerID, com
 
 func (r *RiskMetricsRepository) List(ctx context.Context, partnerID int64, limit, offset int64) ([]*domain.RiskMetrics, error) {
 	query := `
-		SELECT id, partner_id, company_id, department_id, questionnaire_id,
+		SELECT id, partner_id, company_id, department_id, template_id,
 			   total_employees, total_submissions, completed_submissions,
 			   response_rate, average_score, risk_level, reliability, can_calculate_risk,
 			   category_scores, calculated_at, created_at, updated_at
@@ -142,7 +142,7 @@ func (r *RiskMetricsRepository) List(ctx context.Context, partnerID int64, limit
 	for rows.Next() {
 		var m domain.RiskMetrics
 		err := rows.Scan(
-			&m.ID, &m.PartnerID, &m.CompanyID, &m.DepartmentID, &m.QuestionnaireID,
+			&m.ID, &m.PartnerID, &m.CompanyID, &m.DepartmentID, &m.TemplateID,
 			&m.TotalEmployees, &m.TotalSubmissions, &m.CompletedSubmissions,
 			&m.ResponseRate, &m.AverageScore, &m.RiskLevel, &m.Reliability, &m.CanCalculateRisk,
 			&m.CategoryScores, &m.CalculatedAt, &m.CreatedAt, &m.UpdatedAt)

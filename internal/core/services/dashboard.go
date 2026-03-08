@@ -41,10 +41,10 @@ func (s *DashboardService) GetCompanyDashboard(ctx context.Context, partnerID, c
 		return nil, err
 	}
 
-	// 2. Buscar questionários em andamento
-	inProgressQuestionnaires, err := s.analyticsService.GetInProgressQuestionnaires(ctx, partnerID, companyID)
+	// 2. Buscar templates em andamento
+	inProgressQuestionnaires, err := s.analyticsService.GetInProgressTemplates(ctx, partnerID, companyID)
 	if err != nil {
-		inProgressQuestionnaires = []*domain.QuestionnaireInProgress{}
+		inProgressQuestionnaires = []*domain.TemplateInProgress{}
 	}
 
 	// 3. Buscar notificações não lidas
@@ -118,14 +118,14 @@ func (s *DashboardService) GetPartnerDashboard(ctx context.Context, partnerID in
 
 	// 3. Buscar status de cada empresa
 	var companiesSummary []*domain.CompanyStatus
-	totalActiveQuestionnaires := 0
+	totalActiveTemplates := 0
 	totalResponseRate := 0.0
 	companiesAtRisk := 0
 	var alerts []string
 
 	for _, company := range companies {
-		// Buscar questionários em andamento da empresa
-		questionnaires, _ := s.analyticsService.GetInProgressQuestionnaires(ctx, partnerID, company.ID)
+		// Buscar templates em andamento da empresa
+		questionnaires, _ := s.analyticsService.GetInProgressTemplates(ctx, partnerID, company.ID)
 		
 		// Buscar departamentos
 		departments, _ := s.departmentRepo.ListByCompany(ctx, partnerID, company.ID, 1000, 0)
@@ -136,7 +136,7 @@ func (s *DashboardService) GetPartnerDashboard(ctx context.Context, partnerID in
 
 		for _, q := range questionnaires {
 			companyResponseRate += q.ResponseRate
-			totalActiveQuestionnaires++
+			totalActiveTemplates++
 			
 			for _, dept := range q.Departments {
 				if dept.RiskLevel == "high" {
@@ -160,7 +160,7 @@ func (s *DashboardService) GetPartnerDashboard(ctx context.Context, partnerID in
 		companiesSummary = append(companiesSummary, &domain.CompanyStatus{
 			CompanyID:            company.ID,
 			CompanyName:          company.Name,
-			ActiveQuestionnaires: len(questionnaires),
+			ActiveTemplates: len(questionnaires),
 			ResponseRate:         companyResponseRate,
 			RiskLevel:            companyRiskLevel,
 			DepartmentsAtRisk:    departmentsAtRisk,
@@ -180,7 +180,7 @@ func (s *DashboardService) GetPartnerDashboard(ctx context.Context, partnerID in
 		PartnerName:               partner.Name,
 		CompaniesSummary:          companiesSummary,
 		TotalCompanies:            len(companies),
-		TotalActiveQuestionnaires: totalActiveQuestionnaires,
+		TotalActiveTemplates: totalActiveTemplates,
 		CompaniesAtRisk:           companiesAtRisk,
 		OverallResponseRate:       overallResponseRate,
 		Alerts:                    alerts,
@@ -209,8 +209,8 @@ func (s *DashboardService) GetDepartmentDashboard(ctx context.Context, partnerID
 		}
 	}
 
-	// 3. Buscar questionários ativos do departamento
-	// TODO: Melhorar para buscar apenas questionários com assignments ativos deste departamento
+	// 3. Buscar templates ativos do departamento
+	// TODO: Melhorar para buscar apenas templates com assignments ativos deste departamento
 	var activeQuestionnaires []*domain.DepartmentQuestionnaire
 	var alerts []string
 
@@ -226,7 +226,7 @@ func (s *DashboardService) GetDepartmentDashboard(ctx context.Context, partnerID
 		DepartmentName:       department.Name,
 		CompanyID:            companyID,
 		CompanyName:          company.Name,
-		ActiveQuestionnaires: activeQuestionnaires,
+		ActiveTemplates: activeQuestionnaires,
 		EmployeesSummary:     employeesSummary,
 		ActionPlans:          []*domain.ActionPlanSummary{}, // TODO: Implementar
 		RiskCategories:       []*domain.RiskCategorySummary{}, // TODO: Implementar

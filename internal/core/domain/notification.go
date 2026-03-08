@@ -25,7 +25,7 @@ type Notification struct {
 	PartnerID       int64      `json:"partner_id"`
 	CompanyID       *int64     `json:"company_id,omitempty"`
 	DepartmentID    *int64     `json:"department_id,omitempty"`
-	QuestionnaireID *int64     `json:"questionnaire_id,omitempty"`
+	TemplateID *int64     `json:"template_id,omitempty"`
 	Type            string     `json:"type"`
 	Title           string     `json:"title"`
 	Message         string     `json:"message"`

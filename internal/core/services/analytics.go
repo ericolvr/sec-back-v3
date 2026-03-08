@@ -663,22 +663,29 @@ func (s *AnalyticsService) calculateRiskByCategory(ctx context.Context, partnerI
 
 // CreateSnapshot congela dados de analytics em um snapshot imutável
 func (s *AnalyticsService) CreateSnapshot(ctx context.Context, partnerID, companyID, departmentID, templateID int64, createdBy *int64) (*domain.AnalyticsReport, error) {
-	// 1. Buscar fórmula ativa do partner
+	// 1. Buscar template para obter versão
+	template, err := s.templateRepo.GetByID(ctx, partnerID, templateID)
+	if err != nil {
+		return nil, fmt.Errorf("template not found: %w", err)
+	}
+
+	// 2. Buscar fórmula ativa do partner
 	formula, err := s.formulaRepo.GetActive(ctx, partnerID)
 	if err != nil {
 		formula = domain.DefaultCalculationFormula(partnerID)
 	}
 
-	// 2. Obter analytics atuais do departamento
+	// 3. Obter analytics atuais do departamento
 	analytics, err := s.GetDepartmentReport(ctx, partnerID, companyID, departmentID, templateID)
 	if err != nil {
 		return nil, err
 	}
 
-	// 3. Criar metadados de cálculo com fórmula usada
+	// 4. Criar metadados de cálculo com fórmula e versão do template
 	metadata := domain.BuildCalculationMetadata(formula)
+	metadata.TemplateVersion = template.Version
 
-	// 4. Criar analytics com metadados
+	// 5. Criar analytics com metadados
 	analyticsWithMetadata := &domain.DepartmentAnalyticsWithMetadata{
 		DepartmentAnalytics: *analytics,
 		CalculationMetadata: metadata,

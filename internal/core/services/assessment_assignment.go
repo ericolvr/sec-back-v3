@@ -149,11 +149,8 @@ func (s *AssessmentAssignmentService) createSubmissionsForDepartment(ctx context
 		return 0, fmt.Errorf("error listing employees: %w", err)
 	}
 
-	fmt.Printf("DEBUG: Found %d employees for department %d\n", len(employees), departmentID)
-
 	count := 0
-	for i, employee := range employees {
-		fmt.Printf("DEBUG: Processing employee %d/%d - ID: %d, Name: %s\n", i+1, len(employees), employee.ID, employee.Name)
+	for _, employee := range employees {
 		// Criar EmployeeSubmission
 		submission := &domain.EmployeeSubmission{
 			PartnerID:       assignment.PartnerID,

@@ -126,6 +126,8 @@ func (s *DashboardService) GetPartnerDashboard(ctx context.Context, partnerID in
 	companiesAtRisk := 0
 	var alerts []string
 
+	companiesWithActiveQuestionnaires := 0
+
 	for _, company := range companies {
 		// Buscar templates em andamento da empresa
 		questionnaires, _ := s.analyticsService.GetInProgressTemplates(ctx, partnerID, company.ID)
@@ -155,6 +157,7 @@ func (s *DashboardService) GetPartnerDashboard(ctx context.Context, partnerID in
 
 		if len(questionnaires) > 0 {
 			companyResponseRate = companyResponseRate / float64(len(questionnaires))
+			companiesWithActiveQuestionnaires++
 		}
 
 		if departmentsAtRisk > len(departments)/2 {
@@ -179,8 +182,8 @@ func (s *DashboardService) GetPartnerDashboard(ctx context.Context, partnerID in
 	}
 
 	overallResponseRate := 0.0
-	if len(companies) > 0 {
-		overallResponseRate = totalResponseRate / float64(len(companies))
+	if companiesWithActiveQuestionnaires > 0 {
+		overallResponseRate = totalResponseRate / float64(companiesWithActiveQuestionnaires)
 	}
 
 	return &domain.PartnerDashboard{

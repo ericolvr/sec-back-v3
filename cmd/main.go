@@ -114,6 +114,8 @@ func main() {
 		departmentRepo,
 	)
 
+	calculationFormulaService := services.NewCalculationFormulaService(formulaRepo)
+
 	emailService := services.NewEmailService()
 
 	// Handlers
@@ -137,6 +139,7 @@ func main() {
 	invitationHandler := api.NewInvitationHandler(invitationService, assignmentService, submissionService, emailService)
 	emailHandler := api.NewEmailHandler(emailService)
 	surveyHandler := api.NewSurveyHandler(submissionService, questionService, templateService)
+	calculationFormulaHandler := api.NewCalculationFormulaHandler(calculationFormulaService)
 
 	// Routes
 	router := httpServer.NewRouter()
@@ -159,6 +162,7 @@ func main() {
 	router.InvitationRoutes = routes.NewInvitationRoutes(invitationHandler)
 	router.EmailRoutes = routes.NewEmailRoutes(emailHandler)
 	router.SurveyRoutes = routes.NewSurveyRoutes(surveyHandler)
+	router.CalculationFormulaRoutes = routes.NewCalculationFormulaRoutes(calculationFormulaHandler)
 
 	port := os.Getenv("PORT")
 	if port == "" {

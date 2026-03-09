@@ -53,6 +53,10 @@ func (r *CalculationFormulaRepository) GetActive(ctx context.Context, partnerID 
 		LIMIT 1`
 
 	var formula domain.CalculationFormula
+	var description, changelog sql.NullString
+	var createdBy sql.NullInt64
+	var activatedAt sql.NullTime
+
 	err := r.db.QueryRowContext(ctx, query, partnerID).Scan(
 		&formula.ID,
 		&formula.PartnerID,
@@ -63,11 +67,11 @@ func (r *CalculationFormulaRepository) GetActive(ctx context.Context, partnerID 
 		&formula.ReliabilityAcceptableMin,
 		&formula.ReliabilityGoodMin,
 		&formula.ReliabilityExcellentMin,
-		&formula.Description,
-		&formula.Changelog,
-		&formula.CreatedBy,
+		&description,
+		&changelog,
+		&createdBy,
 		&formula.CreatedAt,
-		&formula.ActivatedAt,
+		&activatedAt,
 	)
 
 	if err == sql.ErrNoRows {
@@ -77,6 +81,20 @@ func (r *CalculationFormulaRepository) GetActive(ctx context.Context, partnerID 
 
 	if err != nil {
 		return nil, err
+	}
+
+	// Atribuir valores nullable
+	if description.Valid {
+		formula.Description = description.String
+	}
+	if changelog.Valid {
+		formula.Changelog = changelog.String
+	}
+	if createdBy.Valid {
+		formula.CreatedBy = &createdBy.Int64
+	}
+	if activatedAt.Valid {
+		formula.ActivatedAt = &activatedAt.Time
 	}
 
 	return &formula, nil
@@ -92,6 +110,10 @@ func (r *CalculationFormulaRepository) GetByVersion(ctx context.Context, partner
 		WHERE partner_id = $1 AND version = $2`
 
 	var formula domain.CalculationFormula
+	var description, changelog sql.NullString
+	var createdBy sql.NullInt64
+	var activatedAt sql.NullTime
+
 	err := r.db.QueryRowContext(ctx, query, partnerID, version).Scan(
 		&formula.ID,
 		&formula.PartnerID,
@@ -102,15 +124,29 @@ func (r *CalculationFormulaRepository) GetByVersion(ctx context.Context, partner
 		&formula.ReliabilityAcceptableMin,
 		&formula.ReliabilityGoodMin,
 		&formula.ReliabilityExcellentMin,
-		&formula.Description,
-		&formula.Changelog,
-		&formula.CreatedBy,
+		&description,
+		&changelog,
+		&createdBy,
 		&formula.CreatedAt,
-		&formula.ActivatedAt,
+		&activatedAt,
 	)
 
 	if err != nil {
 		return nil, err
+	}
+
+	// Atribuir valores nullable
+	if description.Valid {
+		formula.Description = description.String
+	}
+	if changelog.Valid {
+		formula.Changelog = changelog.String
+	}
+	if createdBy.Valid {
+		formula.CreatedBy = &createdBy.Int64
+	}
+	if activatedAt.Valid {
+		formula.ActivatedAt = &activatedAt.Time
 	}
 
 	return &formula, nil
@@ -134,6 +170,31 @@ func (r *CalculationFormulaRepository) List(ctx context.Context, partnerID int64
 	defer rows.Close()
 
 	return r.scanFormulas(rows)
+}
+
+func (r *CalculationFormulaRepository) Update(ctx context.Context, formula *domain.CalculationFormula) error {
+	query := `
+		UPDATE calculation_formulas 
+		SET risk_low_max = $1,
+			risk_medium_max = $2,
+			reliability_acceptable_min = $3,
+			reliability_good_min = $4,
+			reliability_excellent_min = $5,
+			description = $6
+		WHERE id = $7`
+
+	_, err := r.db.ExecContext(
+		ctx, query,
+		formula.RiskLowMax,
+		formula.RiskMediumMax,
+		formula.ReliabilityAcceptableMin,
+		formula.ReliabilityGoodMin,
+		formula.ReliabilityExcellentMin,
+		formula.Description,
+		formula.ID,
+	)
+
+	return err
 }
 
 func (r *CalculationFormulaRepository) Activate(ctx context.Context, partnerID int64, version string) error {
@@ -176,6 +237,10 @@ func (r *CalculationFormulaRepository) scanFormulas(rows *sql.Rows) ([]*domain.C
 
 	for rows.Next() {
 		var formula domain.CalculationFormula
+		var description, changelog sql.NullString
+		var createdBy sql.NullInt64
+		var activatedAt sql.NullTime
+
 		err := rows.Scan(
 			&formula.ID,
 			&formula.PartnerID,
@@ -186,15 +251,29 @@ func (r *CalculationFormulaRepository) scanFormulas(rows *sql.Rows) ([]*domain.C
 			&formula.ReliabilityAcceptableMin,
 			&formula.ReliabilityGoodMin,
 			&formula.ReliabilityExcellentMin,
-			&formula.Description,
-			&formula.Changelog,
-			&formula.CreatedBy,
+			&description,
+			&changelog,
+			&createdBy,
 			&formula.CreatedAt,
-			&formula.ActivatedAt,
+			&activatedAt,
 		)
 
 		if err != nil {
 			return nil, err
+		}
+
+		// Atribuir valores nullable
+		if description.Valid {
+			formula.Description = description.String
+		}
+		if changelog.Valid {
+			formula.Changelog = changelog.String
+		}
+		if createdBy.Valid {
+			formula.CreatedBy = &createdBy.Int64
+		}
+		if activatedAt.Valid {
+			formula.ActivatedAt = &activatedAt.Time
 		}
 
 		formulas = append(formulas, &formula)

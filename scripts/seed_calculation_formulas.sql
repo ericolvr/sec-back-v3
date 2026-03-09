@@ -1,12 +1,40 @@
 -- Seed para calculation_formulas
--- Fórmulas de cálculo para questionários NR-1
+-- Fórmula padrão NR-1 com thresholds de risco e confiabilidade
 
--- Fórmula padrão: média simples das respostas
-INSERT INTO calculation_formulas (partner_id, name, description, formula_type, weight_config, created_at, updated_at)
-VALUES 
-(1, 'Média Simples', 'Calcula a média aritmética simples de todas as respostas', 'simple_average', '{}', NOW(), NOW()),
-(1, 'Média Ponderada NR-1', 'Calcula média ponderada considerando peso das perguntas', 'weighted_average', '{"default_weight": 1.0}', NOW(), NOW()),
-(1, 'Score Normalizado', 'Normaliza o score para escala 0-100', 'normalized', '{"min": 0, "max": 100}', NOW(), NOW());
+-- Inserir fórmula padrão para cada partner existente
+-- Ajuste o partner_id conforme necessário (1 é o padrão)
+INSERT INTO calculation_formulas (
+    partner_id, 
+    version, 
+    active,
+    risk_low_max,
+    risk_medium_max,
+    reliability_acceptable_min,
+    reliability_good_min,
+    reliability_excellent_min,
+    description,
+    created_at
+)
+VALUES (
+    1,                  -- partner_id (ajuste conforme seu partner)
+    '1.0',              -- version
+    true,               -- active
+    1.5,                -- risk_low_max (scores <= 1.5 = baixo risco)
+    2.5,                -- risk_medium_max (scores 1.5-2.5 = médio risco, >2.5 = alto)
+    30,                 -- reliability_acceptable_min (>= 30% taxa de resposta)
+    50,                 -- reliability_good_min (>= 50% taxa de resposta)
+    70,                 -- reliability_excellent_min (>= 70% taxa de resposta)
+    'Fórmula padrão baseada em estudos NR-1',
+    NOW()
+)
+ON CONFLICT (partner_id, version) DO UPDATE SET
+    active = EXCLUDED.active,
+    risk_low_max = EXCLUDED.risk_low_max,
+    risk_medium_max = EXCLUDED.risk_medium_max,
+    reliability_acceptable_min = EXCLUDED.reliability_acceptable_min,
+    reliability_good_min = EXCLUDED.reliability_good_min,
+    reliability_excellent_min = EXCLUDED.reliability_excellent_min,
+    description = EXCLUDED.description;
 
 -- Verificar inserção
-SELECT * FROM calculation_formulas;
+SELECT * FROM calculation_formulas WHERE partner_id = 1;

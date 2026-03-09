@@ -32,6 +32,7 @@ type Router struct {
 	InvitationRoutes           RouteSetup
 	EmailRoutes                RouteSetup
 	SurveyRoutes               RouteSetup
+	CalculationFormulaRoutes   RouteSetup
 }
 
 func NewRouter() *Router {
@@ -113,6 +114,9 @@ func (r *Router) SetupRoutes(engine *gin.Engine) {
 		}
 		if r.SurveyRoutes != nil {
 			r.SurveyRoutes.SetupRoutes(v1)
+		}
+		if r.CalculationFormulaRoutes != nil {
+			r.CalculationFormulaRoutes.SetupRoutes(v1)
 		}
 	}
 }

@@ -21,18 +21,19 @@ const (
 )
 
 type ActionPlanActivity struct {
-	ID            int64      `json:"id"`
-	ActionPlanID  int64      `json:"action_plan_id"`
-	Type          string     `json:"type"`
-	Title         string     `json:"title"`
-	Description   string     `json:"description"`
-	Status        string     `json:"status"`
-	DueDate       *time.Time `json:"due_date"`
-	CompletedAt   *time.Time `json:"completed_at"`
-	CreatedBy     *int64     `json:"created_by"`
-	CreatedByName string     `json:"created_by_name"`
-	CreatedAt     time.Time  `json:"created_at"`
-	UpdatedAt     time.Time  `json:"updated_at"`
+	ID            int64            `json:"id"`
+	ActionPlanID  int64            `json:"action_plan_id"`
+	Type          string           `json:"type"`
+	Title         string           `json:"title"`
+	Description   string           `json:"description"`
+	Status        string           `json:"status"`
+	DueDate       *time.Time       `json:"due_date"`
+	CompletedAt   *time.Time       `json:"completed_at"`
+	CreatedBy     *int64           `json:"created_by"`
+	CreatedByName string           `json:"created_by_name"`
+	Medias        []*ActivityMedia `json:"medias,omitempty"`
+	CreatedAt     time.Time        `json:"created_at"`
+	UpdatedAt     time.Time        `json:"updated_at"`
 }
 
 type ActionPlanActivityRepository interface {

@@ -68,6 +68,13 @@ func (r *ActionPlanActivityRepository) GetByID(ctx context.Context, id int64) (*
 		return nil, err
 	}
 
+	// Carregar mídias associadas
+	medias, err := r.loadMedias(ctx, activity.ID)
+	if err != nil {
+		return nil, err
+	}
+	activity.Medias = medias
+
 	return activity, nil
 }
 
@@ -111,6 +118,13 @@ func (r *ActionPlanActivityRepository) ListByActionPlan(ctx context.Context, act
 			return nil, err
 		}
 
+		// Carregar mídias associadas
+		medias, err := r.loadMedias(ctx, activity.ID)
+		if err != nil {
+			return nil, err
+		}
+		activity.Medias = medias
+
 		activities = append(activities, activity)
 	}
 
@@ -142,4 +156,39 @@ func (r *ActionPlanActivityRepository) Delete(ctx context.Context, id int64) err
 	query := `DELETE FROM action_plan_activities WHERE id = $1`
 	_, err := r.db.ExecContext(ctx, query, id)
 	return err
+}
+
+// loadMedias carrega todas as mídias associadas a uma atividade
+func (r *ActionPlanActivityRepository) loadMedias(ctx context.Context, activityID int64) ([]*domain.ActivityMedia, error) {
+	query := `
+		SELECT id, activity_id, media_url, media_type, created_at
+		FROM activity_media
+		WHERE activity_id = $1
+		ORDER BY created_at ASC
+	`
+
+	rows, err := r.db.QueryContext(ctx, query, activityID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var medias []*domain.ActivityMedia
+
+	for rows.Next() {
+		media := &domain.ActivityMedia{}
+		err := rows.Scan(
+			&media.ID,
+			&media.ActivityID,
+			&media.MediaURL,
+			&media.MediaType,
+			&media.CreatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+		medias = append(medias, media)
+	}
+
+	return medias, nil
 }

@@ -382,37 +382,30 @@ func (s *AnalyticsService) GetInProgressTemplates(ctx context.Context, partnerID
 				continue
 			}
 
-			// Buscar métricas do departamento
-			metrics, err := s.riskMetricsService.GetByDepartment(ctx, partnerID, deptID, assignment.TemplateID)
+			// SEMPRE recalcular métricas para garantir dados atualizados
+			companyID := dept.CompanyID
+			metrics, err := s.riskMetricsService.CalculateAndStore(ctx, partnerID, companyID, deptID, assignment.TemplateID)
 			if err != nil {
-				// Métricas não existem - tentar calcular agora
-				// Buscar company_id do departamento
-				companyID := dept.CompanyID
-
-				// Tentar calcular e armazenar métricas
-				metrics, err = s.riskMetricsService.CalculateAndStore(ctx, partnerID, companyID, deptID, assignment.TemplateID)
-				if err != nil {
-					// Realmente não há dados - departamento não iniciado
-					deptStatus := &domain.DepartmentStatus{
-						DepartmentID:       deptID,
-						DepartmentName:     dept.Name,
-						TotalEmployees:     0,
-						CompletedResponses: 0,
-						PendingResponses:   0,
-						ResponseRate:       0,
-						CanCalculateRisk:   false,
-						Reliability:        "insufficient",
-						AverageScore:       0,
-						RiskLevel:          "unknown",
-						Status:             "not_started",
-						IsActive:           true,
-						CanClose:           false,
-						CanCloseReason:     "Nenhuma resposta ainda",
-					}
-					qip.Departments = append(qip.Departments, deptStatus)
-					qip.DepartmentsNotStarted++
-					continue
+				// Realmente não há dados - departamento não iniciado
+				deptStatus := &domain.DepartmentStatus{
+					DepartmentID:       deptID,
+					DepartmentName:     dept.Name,
+					TotalEmployees:     0,
+					CompletedResponses: 0,
+					PendingResponses:   0,
+					ResponseRate:       0,
+					CanCalculateRisk:   false,
+					Reliability:        "insufficient",
+					AverageScore:       0,
+					RiskLevel:          "unknown",
+					Status:             "not_started",
+					IsActive:           true,
+					CanClose:           false,
+					CanCloseReason:     "Nenhuma resposta ainda",
 				}
+				qip.Departments = append(qip.Departments, deptStatus)
+				qip.DepartmentsNotStarted++
+				continue
 			}
 
 			// Determinar status do departamento

@@ -11,20 +11,23 @@ import (
 )
 
 type EmployeeSubmissionService struct {
-	submissionRepo domain.EmployeeSubmissionRepository
-	employeeRepo   domain.EmployeeRepository
-	templateRepo   domain.AssessmentTemplateRepository
+	submissionRepo     domain.EmployeeSubmissionRepository
+	employeeRepo       domain.EmployeeRepository
+	templateRepo       domain.AssessmentTemplateRepository
+	riskMetricsService *RiskMetricsService
 }
 
 func NewEmployeeSubmissionService(
 	submissionRepo domain.EmployeeSubmissionRepository,
 	employeeRepo domain.EmployeeRepository,
 	templateRepo domain.AssessmentTemplateRepository,
+	riskMetricsService *RiskMetricsService,
 ) *EmployeeSubmissionService {
 	return &EmployeeSubmissionService{
-		submissionRepo: submissionRepo,
-		employeeRepo:   employeeRepo,
-		templateRepo:   templateRepo,
+		submissionRepo:     submissionRepo,
+		employeeRepo:       employeeRepo,
+		templateRepo:       templateRepo,
+		riskMetricsService: riskMetricsService,
 	}
 }
 
@@ -139,7 +142,17 @@ func (s *EmployeeSubmissionService) Complete(ctx context.Context, partnerID, id 
 	now := time.Now()
 	submission.CompletedAt = &now
 
-	return s.submissionRepo.Update(ctx, submission)
+	err = s.submissionRepo.Update(ctx, submission)
+	if err != nil {
+		return err
+	}
+
+	// TRIGGER: Recalcular métricas do departamento automaticamente
+	if s.riskMetricsService != nil {
+		_, _ = s.riskMetricsService.CalculateAndStore(ctx, submission.PartnerID, submission.CompanyID, submission.DepartmentID, submission.TemplateID)
+	}
+
+	return nil
 }
 
 func (s *EmployeeSubmissionService) UpdateStatus(ctx context.Context, partnerID, id int64, status string) error {
@@ -152,13 +165,24 @@ func (s *EmployeeSubmissionService) UpdateStatus(ctx context.Context, partnerID,
 		return err
 	}
 
+	oldStatus := submission.Status
 	submission.Status = status
 	if status == "completed" && submission.CompletedAt == nil {
 		now := time.Now()
 		submission.CompletedAt = &now
 	}
 
-	return s.submissionRepo.Update(ctx, submission)
+	err = s.submissionRepo.Update(ctx, submission)
+	if err != nil {
+		return err
+	}
+
+	// TRIGGER: Recalcular métricas se mudou para completed
+	if status == "completed" && oldStatus != "completed" && s.riskMetricsService != nil {
+		_, _ = s.riskMetricsService.CalculateAndStore(ctx, submission.PartnerID, submission.CompanyID, submission.DepartmentID, submission.TemplateID)
+	}
+
+	return nil
 }
 
 func (s *EmployeeSubmissionService) Delete(ctx context.Context, partnerID, id int64) error {

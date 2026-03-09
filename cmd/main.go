@@ -73,11 +73,8 @@ func main() {
 	partnerService := services.NewPartnerService(partnerRepo)
 	versionService := services.NewAssessmentVersionService(versionRepo)
 	templateService := services.NewAssessmentTemplateService(templateRepo, partnerRepo, versionService)
-	submissionService := services.NewEmployeeSubmissionService(submissionRepo, employeeRepo, templateRepo)
-	assignmentService := services.NewAssessmentAssignmentService(assignmentRepo, departmentRepo, employeeRepo, submissionRepo, invitationRepo)
-	invitationService := services.NewInvitationService(invitationRepo, submissionRepo, employeeRepo)
 
-	// RiskMetricsService e AnalyticsService
+	// RiskMetricsService (precisa ser criado antes de EmployeeSubmissionService)
 	riskMetricsService := services.NewRiskMetricsService(
 		riskMetricsRepo,
 		submissionRepo,
@@ -89,6 +86,11 @@ func main() {
 		formulaRepo,
 		nil, // actionPlanService - será nil por enquanto
 	)
+
+	// EmployeeSubmissionService (agora com RiskMetricsService para trigger automático)
+	submissionService := services.NewEmployeeSubmissionService(submissionRepo, employeeRepo, templateRepo, riskMetricsService)
+	assignmentService := services.NewAssessmentAssignmentService(assignmentRepo, departmentRepo, employeeRepo, submissionRepo, invitationRepo)
+	invitationService := services.NewInvitationService(invitationRepo, submissionRepo, employeeRepo)
 
 	analyticsService := services.NewAnalyticsService(
 		riskMetricsService,

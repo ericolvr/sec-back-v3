@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/ericolvr/sec-back-v2/internal/core/domain"
 )
@@ -65,16 +66,21 @@ func (s *RiskMetricsService) CalculateAndStore(ctx context.Context, partnerID, c
 		}
 	}
 
+	fmt.Printf("[DEBUG] Department %d - Total Active Employees: %d\n", departmentID, totalEmployees)
+
 	submissions, err := s.submissionRepo.ListByDepartment(ctx, partnerID, departmentID, MaxSubmissionsForMetrics, 0)
 	if err != nil {
 		return nil, err
 	}
+
+	fmt.Printf("[DEBUG] Department %d - Total Submissions Found: %d\n", departmentID, len(submissions))
 
 	totalSubmissions := int64(0)
 	completedSubmissions := int64(0)
 	var completedSubmissionIDs []int64
 
 	for _, sub := range submissions {
+		fmt.Printf("[DEBUG] Submission ID %d - TemplateID: %d (expected: %d), Status: %s\n", sub.ID, sub.TemplateID, templateID, sub.Status)
 		if sub.TemplateID == templateID {
 			totalSubmissions++
 			if sub.Status == "completed" {
@@ -84,10 +90,14 @@ func (s *RiskMetricsService) CalculateAndStore(ctx context.Context, partnerID, c
 		}
 	}
 
+	fmt.Printf("[DEBUG] Department %d - Completed Submissions: %d / %d employees\n", departmentID, completedSubmissions, totalEmployees)
+
 	responseRate := float64(0)
 	if totalEmployees > 0 {
 		responseRate = (float64(completedSubmissions) / float64(totalEmployees)) * 100
 	}
+
+	fmt.Printf("[DEBUG] Department %d - Response Rate: %.2f%%\n", departmentID, responseRate)
 
 	// Buscar todas as perguntas do template para obter os pesos
 	questions, err := s.questionRepo.List(ctx, partnerID, templateID, MaxQuestionsPerTemplate, 0)
@@ -151,7 +161,7 @@ func (s *RiskMetricsService) CalculateAndStore(ctx context.Context, partnerID, c
 		PartnerID:            partnerID,
 		CompanyID:            companyID,
 		DepartmentID:         departmentID,
-		TemplateID:      templateID,
+		TemplateID:           templateID,
 		TotalEmployees:       int(totalEmployees),
 		TotalSubmissions:     int(totalSubmissions),
 		CompletedSubmissions: int(completedSubmissions),

@@ -48,6 +48,7 @@ func main() {
 	riskMetricsRepo := database.NewRiskMetricsRepository(db)
 	versionRepo := database.NewAssessmentVersionRepository(db)
 	invitationRepo := database.NewInvitationRepository(db)
+	notificationRepo := database.NewNotificationRepository(db)
 
 	// Storage Client (Google Cloud Storage)
 	ctx := context.Background()
@@ -116,6 +117,17 @@ func main() {
 
 	calculationFormulaService := services.NewCalculationFormulaService(formulaRepo)
 
+	notificationService := services.NewNotificationService(notificationRepo, settingsRepo)
+
+	dashboardService := services.NewDashboardService(
+		analyticsService,
+		notificationService,
+		employeeRepo,
+		departmentRepo,
+		companyRepo,
+		partnerRepo,
+	)
+
 	emailService := services.NewEmailService()
 
 	// Handlers
@@ -140,6 +152,7 @@ func main() {
 	emailHandler := api.NewEmailHandler(emailService)
 	surveyHandler := api.NewSurveyHandler(submissionService, questionService, templateService)
 	calculationFormulaHandler := api.NewCalculationFormulaHandler(calculationFormulaService)
+	dashboardHandler := api.NewDashboardHandler(dashboardService)
 
 	// Routes
 	router := httpServer.NewRouter()
@@ -163,6 +176,7 @@ func main() {
 	router.EmailRoutes = routes.NewEmailRoutes(emailHandler)
 	router.SurveyRoutes = routes.NewSurveyRoutes(surveyHandler)
 	router.CalculationFormulaRoutes = routes.NewCalculationFormulaRoutes(calculationFormulaHandler)
+	router.DashboardRoutes = routes.NewDashboardRoutes(dashboardHandler)
 
 	port := os.Getenv("PORT")
 	if port == "" {

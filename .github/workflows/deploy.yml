@@ -1,0 +1,125 @@
+name: Deploy to Cloud Run
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+  SERVICE_NAME: nr1-back-api
+  REGION: ${{ vars.GCP_REGION }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate required GitHub Variables
+        run: |
+          missing=""
+          [ -z "${{ vars.GCP_PROJECT_ID }}" ] && missing="$missing GCP_PROJECT_ID"
+          [ -z "${{ vars.GCP_REGION }}" ] && missing="$missing GCP_REGION"
+          [ -z "${{ vars.DB_HOST }}" ] && missing="$missing DB_HOST"
+          [ -z "${{ vars.DB_PORT }}" ] && missing="$missing DB_PORT"
+          [ -z "${{ vars.DB_USER }}" ] && missing="$missing DB_USER"
+          [ -z "${{ vars.DB_NAME }}" ] && missing="$missing DB_NAME"
+          [ -z "${{ vars.DB_SSLMODE }}" ] && missing="$missing DB_SSLMODE"
+          [ -z "${{ vars.GCS_BUCKET_NAME }}" ] && missing="$missing GCS_BUCKET_NAME"
+          [ -z "${{ vars.SMTP_HOST }}" ] && missing="$missing SMTP_HOST"
+          [ -z "${{ vars.SMTP_PORT }}" ] && missing="$missing SMTP_PORT"
+          [ -z "${{ vars.SMTP_USER }}" ] && missing="$missing SMTP_USER"
+          [ -z "${{ vars.SMTP_FROM_EMAIL }}" ] && missing="$missing SMTP_FROM_EMAIL"
+          [ -z "${{ vars.SMTP_FROM_NAME }}" ] && missing="$missing SMTP_FROM_NAME"
+          [ -z "${{ vars.FRONTEND_URL }}" ] && missing="$missing FRONTEND_URL"
+          [ -z "${{ vars.TWILIO_FROM }}" ] && missing="$missing TWILIO_FROM"
+          if [ -n "$missing" ]; then
+            echo "Missing required GitHub Variables:$missing"
+            exit 1
+          fi
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: '${{ secrets.GCP_SA_KEY }}'
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker to use gcloud
+        run: gcloud auth configure-docker
+
+      - name: Validate required secrets exist in Secret Manager
+        run: |
+          gcloud secrets describe nr1-back-db-password --project "${{ env.PROJECT_ID }}" >/dev/null
+          gcloud secrets describe nr1-back-jwt-secret --project "${{ env.PROJECT_ID }}" >/dev/null
+          gcloud secrets describe nr1-back-smtp-password --project "${{ env.PROJECT_ID }}" >/dev/null
+          gcloud secrets describe nr1-back-twilio-sid --project "${{ env.PROJECT_ID }}" >/dev/null
+          gcloud secrets describe nr1-back-twilio-token --project "${{ env.PROJECT_ID }}" >/dev/null
+
+      - name: Build Docker image
+        run: |
+          docker build --no-cache -t gcr.io/${{ env.PROJECT_ID }}/${{ env.SERVICE_NAME }}:${{ github.sha }} .
+          docker tag gcr.io/${{ env.PROJECT_ID }}/${{ env.SERVICE_NAME }}:${{ github.sha }} gcr.io/${{ env.PROJECT_ID }}/${{ env.SERVICE_NAME }}:latest
+
+      - name: Push Docker image to Container Registry
+        run: |
+          docker push gcr.io/${{ env.PROJECT_ID }}/${{ env.SERVICE_NAME }}:${{ github.sha }}
+          docker push gcr.io/${{ env.PROJECT_ID }}/${{ env.SERVICE_NAME }}:latest
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy ${{ env.SERVICE_NAME }} \
+            --image gcr.io/${{ env.PROJECT_ID }}/${{ env.SERVICE_NAME }}:latest \
+            --region ${{ env.REGION }} \
+            --platform managed \
+            --allow-unauthenticated \
+            --port 8080 \
+            --memory 512Mi \
+            --cpu 1 \
+            --max-instances 10 \
+            --timeout 300 \
+            --set-env-vars PORT=8080 \
+            --set-env-vars SERVER_PORT=8080 \
+            --set-env-vars ENV=production \
+            --set-env-vars LOG_LEVEL=info \
+            --set-env-vars DB_HOST=${{ vars.DB_HOST }} \
+            --set-env-vars DB_PORT=${{ vars.DB_PORT }} \
+            --set-env-vars DB_USER=${{ vars.DB_USER }} \
+            --set-env-vars DB_NAME=${{ vars.DB_NAME }} \
+            --set-env-vars DB_SSLMODE=${{ vars.DB_SSLMODE }} \
+            --set-env-vars GCS_BUCKET_NAME=${{ vars.GCS_BUCKET_NAME }} \
+            --set-env-vars SMTP_HOST=${{ vars.SMTP_HOST }} \
+            --set-env-vars SMTP_PORT=${{ vars.SMTP_PORT }} \
+            --set-env-vars SMTP_USER=${{ vars.SMTP_USER }} \
+            --set-env-vars SMTP_FROM_EMAIL=${{ vars.SMTP_FROM_EMAIL }} \
+            --set-env-vars SMTP_FROM_NAME=${{ vars.SMTP_FROM_NAME }} \
+            --set-env-vars FRONTEND_URL=${{ vars.FRONTEND_URL }} \
+            --set-env-vars TWILIO_FROM=${{ vars.TWILIO_FROM }} \
+            --set-secrets DB_PASSWORD=nr1-back-db-password:latest \
+            --set-secrets JWT_SECRET=nr1-back-jwt-secret:latest \
+            --set-secrets SMTP_PASSWORD=nr1-back-smtp-password:latest \
+            --set-secrets TWILIO_ACCOUNT_SID=nr1-back-twilio-sid:latest \
+            --set-secrets TWILIO_AUTH_TOKEN=nr1-back-twilio-token:latest
+
+      - name: Get Cloud Run URL
+        id: deploy_url
+        run: |
+          SERVICE_URL=$(gcloud run services describe ${{ env.SERVICE_NAME }} --region ${{ env.REGION }} --format 'value(status.url)')
+          echo "url=$SERVICE_URL" >> $GITHUB_OUTPUT
+          echo "Service deployed at: $SERVICE_URL"
+
+      - name: Deployment Summary
+        run: |
+          echo "=========================================="
+          echo "Deployment Complete!"
+          echo "=========================================="
+          echo "Service: ${{ env.SERVICE_NAME }}"
+          echo "Region: ${{ env.REGION }}"
+          echo "Image: gcr.io/${{ env.PROJECT_ID }}/${{ env.SERVICE_NAME }}:${{ github.sha }}"
+          echo "URL: ${{ steps.deploy_url.outputs.url }}"
+          echo "=========================================="

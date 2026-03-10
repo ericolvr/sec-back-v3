@@ -2,12 +2,18 @@ package utils
 
 import (
 	"errors"
+	"os"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 )
 
-var jwtSecret = []byte("your-secret-key-change-this-in-production") // TODO: Move to config
+var jwtSecret = []byte(func() string {
+	if v := os.Getenv("JWT_SECRET"); v != "" {
+		return v
+	}
+	return "your-secret-key-change-this-in-production"
+}()) // TODO: Move to config
 
 type Claims struct {
 	UserID   int64  `json:"user_id"`

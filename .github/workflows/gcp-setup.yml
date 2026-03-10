@@ -1,0 +1,175 @@
+name: GCP Infrastructure Setup
+
+on:
+  workflow_dispatch:
+    inputs:
+      project_id:
+        description: 'GCP Project ID (ex: nr1-back)'
+        required: true
+        type: string
+      project_name:
+        description: 'GCP Project Name (ex: NR1 Backend)'
+        required: true
+        type: string
+      db_instance_name:
+        description: 'Cloud SQL Instance Name (ex: nr1-back-db)'
+        required: true
+        type: string
+      db_name:
+        description: 'Database Name (ex: nr1_back_production)'
+        required: true
+        type: string
+      db_user:
+        description: 'Database User (ex: nr1_back_user)'
+        required: true
+        type: string
+      region:
+        description: 'GCP Region'
+        required: true
+        default: 'us-central1'
+        type: string
+
+jobs:
+  setup-infrastructure:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check if GCP_SA_KEY secret exists
+        run: |
+          if [ -z "${{ secrets.GCP_SA_KEY }}" ]; then
+            echo "ERROR: GCP_SA_KEY secret is not set or is empty"
+            echo "Please add the secret in GitHub Settings -> Secrets and variables -> Actions"
+            exit 1
+          else
+            echo "GCP_SA_KEY secret is present"
+          fi
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: '${{ secrets.GCP_SA_KEY }}'
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Create GCP Project
+        run: |
+          echo "Creating project: ${{ inputs.project_id }}"
+          gcloud projects create ${{ inputs.project_id }} --name="${{ inputs.project_name }}" || echo "Project already exists"
+
+      - name: Set project as default
+        run: |
+          gcloud config set project ${{ inputs.project_id }}
+
+      - name: Link billing account (if needed)
+        run: |
+          echo "Note: You may need to link a billing account manually in GCP Console"
+          echo "Visit: https://console.cloud.google.com/billing/linkedaccount?project=${{ inputs.project_id }}"
+
+      - name: Enable required APIs
+        run: |
+          echo "Enabling APIs..."
+          gcloud services enable \
+            cloudbuild.googleapis.com \
+            run.googleapis.com \
+            containerregistry.googleapis.com \
+            artifactregistry.googleapis.com \
+            sqladmin.googleapis.com \
+            secretmanager.googleapis.com \
+            iam.googleapis.com \
+            logging.googleapis.com \
+            monitoring.googleapis.com \
+            storage.googleapis.com \
+            cloudresourcemanager.googleapis.com
+
+      - name: Wait for APIs to be ready
+        run: sleep 30
+
+      - name: Get project number
+        id: project_info
+        run: |
+          PROJECT_NUMBER=$(gcloud projects describe ${{ inputs.project_id }} --format='value(projectNumber)')
+          echo "project_number=$PROJECT_NUMBER" >> $GITHUB_OUTPUT
+          echo "Project Number: $PROJECT_NUMBER"
+
+      - name: Create Cloud SQL instance
+        run: |
+          echo "Creating Cloud SQL instance: ${{ inputs.db_instance_name }}"
+          gcloud sql instances create ${{ inputs.db_instance_name }} \
+            --database-version=POSTGRES_15 \
+            --tier=db-f1-micro \
+            --region=${{ inputs.region }} \
+            --storage-type=SSD \
+            --storage-size=10GB \
+            --backup-start-time=03:00 \
+            --maintenance-window-day=SUN \
+            --maintenance-window-hour=04 \
+            --maintenance-release-channel=production \
+            --authorized-networks=0.0.0.0/0 || echo "Instance already exists"
+
+      - name: Wait for Cloud SQL to be ready
+        run: sleep 60
+
+      - name: Set root password
+        run: |
+          echo "Setting root password..."
+          gcloud sql users set-password root \
+            --instance=${{ inputs.db_instance_name }} \
+            --password="${{ secrets.DB_ROOT_PASSWORD }}"
+
+      - name: Create database user
+        run: |
+          echo "Creating database user: ${{ inputs.db_user }}"
+          gcloud sql users create ${{ inputs.db_user }} \
+            --instance=${{ inputs.db_instance_name }} \
+            --password="${{ secrets.DB_PASSWORD }}" || echo "User already exists"
+
+      - name: Create database
+        run: |
+          echo "Creating database: ${{ inputs.db_name }}"
+          gcloud sql databases create ${{ inputs.db_name }} \
+            --instance=${{ inputs.db_instance_name }} || echo "Database already exists"
+
+      - name: Create secrets in Secret Manager
+        run: |
+          echo "Creating secrets..."
+
+          echo -n "${{ secrets.DB_PASSWORD }}" | gcloud secrets create nr1-back-db-password --data-file=- || \
+            echo -n "${{ secrets.DB_PASSWORD }}" | gcloud secrets versions add nr1-back-db-password --data-file=-
+
+          echo -n "${{ secrets.JWT_SECRET }}" | gcloud secrets create nr1-back-jwt-secret --data-file=- || \
+            echo -n "${{ secrets.JWT_SECRET }}" | gcloud secrets versions add nr1-back-jwt-secret --data-file=-
+
+          echo -n "${{ secrets.SMTP_PASSWORD }}" | gcloud secrets create nr1-back-smtp-password --data-file=- || \
+            echo -n "${{ secrets.SMTP_PASSWORD }}" | gcloud secrets versions add nr1-back-smtp-password --data-file=-
+
+          echo -n "${{ secrets.TWILIO_ACCOUNT_SID }}" | gcloud secrets create nr1-back-twilio-sid --data-file=- || \
+            echo -n "${{ secrets.TWILIO_ACCOUNT_SID }}" | gcloud secrets versions add nr1-back-twilio-sid --data-file=-
+
+          echo -n "${{ secrets.TWILIO_AUTH_TOKEN }}" | gcloud secrets create nr1-back-twilio-token --data-file=- || \
+            echo -n "${{ secrets.TWILIO_AUTH_TOKEN }}" | gcloud secrets versions add nr1-back-twilio-token --data-file=-
+
+      - name: Grant secret access to default compute service account
+        run: |
+          PROJECT_NUMBER="${{ steps.project_info.outputs.project_number }}"
+
+          for secret in nr1-back-db-password nr1-back-jwt-secret nr1-back-smtp-password nr1-back-twilio-sid nr1-back-twilio-token; do
+            gcloud secrets add-iam-policy-binding $secret \
+              --member="serviceAccount:${PROJECT_NUMBER}-compute@developer.gserviceaccount.com" \
+              --role="roles/secretmanager.secretAccessor" || echo "Permission already exists for $secret"
+          done
+
+      - name: Setup complete
+        run: |
+          echo "=========================================="
+          echo "GCP Infrastructure Setup Complete!"
+          echo "=========================================="
+          echo "Project ID: ${{ inputs.project_id }}"
+          echo "Cloud SQL Instance: ${{ inputs.db_instance_name }}"
+          echo "Database: ${{ inputs.db_name }}"
+          echo "Database User: ${{ inputs.db_user }}"
+          echo "Region: ${{ inputs.region }}"
+          echo "=========================================="

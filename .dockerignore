@@ -1,0 +1,9 @@
+.git
+.windsurf
+bin
+*.log
+.env
+.env.*
+.vscode
+.idea
+.DS_Store

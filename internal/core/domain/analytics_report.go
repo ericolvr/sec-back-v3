@@ -29,13 +29,15 @@ type DepartmentAnalyticsWithMetadata struct {
 
 // AnalyticsReport representa um snapshot congelado de analytics
 type AnalyticsReport struct {
-	ID           int64     `json:"id"`
-	PartnerID    int64     `json:"partner_id"`
-	DepartmentID int64     `json:"department_id"`
-	TemplateID   int64     `json:"template_id"`
-	ReportData   []byte    `json:"report_data"` // JSON do DepartmentAnalyticsWithMetadata
-	CreatedBy    *int64    `json:"created_by,omitempty"`
-	CreatedAt    time.Time `json:"created_at"`
+	ID             int64     `json:"id"`
+	PartnerID      int64     `json:"partner_id"`
+	DepartmentID   int64     `json:"department_id"`
+	DepartmentName string    `json:"department_name,omitempty"` // Preenchido via JOIN
+	TemplateID     int64     `json:"template_id"`
+	TemplateName   string    `json:"template_name,omitempty"` // Preenchido via JOIN
+	ReportData     []byte    `json:"report_data"`             // JSON do DepartmentAnalyticsWithMetadata
+	CreatedBy      *int64    `json:"created_by,omitempty"`
+	CreatedAt      time.Time `json:"created_at"`
 }
 
 type AnalyticsReportRepository interface {

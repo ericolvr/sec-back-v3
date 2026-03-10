@@ -60,11 +60,16 @@ func (r *AnalyticsReportRepository) GetByID(ctx context.Context, partnerID, id i
 
 func (r *AnalyticsReportRepository) List(ctx context.Context, partnerID int64, limit, offset int64) ([]*domain.AnalyticsReport, error) {
 	query := `
-		SELECT id, partner_id, department_id, template_id,
-			report_data, created_by, created_at
-		FROM analytics_reports
-		WHERE partner_id = $1
-		ORDER BY created_at DESC
+		SELECT 
+			ar.id, ar.partner_id, ar.department_id, ar.template_id,
+			ar.report_data, ar.created_by, ar.created_at,
+			d.name as department_name,
+			at.name as template_name
+		FROM analytics_reports ar
+		LEFT JOIN departments d ON ar.department_id = d.id
+		LEFT JOIN assessment_templates at ON ar.template_id = at.id
+		WHERE ar.partner_id = $1
+		ORDER BY ar.created_at DESC
 		LIMIT $2 OFFSET $3`
 
 	rows, err := r.db.QueryContext(ctx, query, partnerID, limit, offset)
@@ -78,11 +83,16 @@ func (r *AnalyticsReportRepository) List(ctx context.Context, partnerID int64, l
 
 func (r *AnalyticsReportRepository) ListByDepartment(ctx context.Context, partnerID, departmentID int64, limit, offset int64) ([]*domain.AnalyticsReport, error) {
 	query := `
-		SELECT id, partner_id, department_id, template_id,
-			report_data, created_by, created_at
-		FROM analytics_reports
-		WHERE partner_id = $1 AND department_id = $2
-		ORDER BY created_at DESC
+		SELECT 
+			ar.id, ar.partner_id, ar.department_id, ar.template_id,
+			ar.report_data, ar.created_by, ar.created_at,
+			d.name as department_name,
+			at.name as template_name
+		FROM analytics_reports ar
+		LEFT JOIN departments d ON ar.department_id = d.id
+		LEFT JOIN assessment_templates at ON ar.template_id = at.id
+		WHERE ar.partner_id = $1 AND ar.department_id = $2
+		ORDER BY ar.created_at DESC
 		LIMIT $3 OFFSET $4`
 
 	rows, err := r.db.QueryContext(ctx, query, partnerID, departmentID, limit, offset)
@@ -96,11 +106,16 @@ func (r *AnalyticsReportRepository) ListByDepartment(ctx context.Context, partne
 
 func (r *AnalyticsReportRepository) ListByTemplate(ctx context.Context, partnerID, templateID int64, limit, offset int64) ([]*domain.AnalyticsReport, error) {
 	query := `
-		SELECT id, partner_id, department_id, template_id,
-			report_data, created_by, created_at
-		FROM analytics_reports
-		WHERE partner_id = $1 AND template_id = $2
-		ORDER BY created_at DESC
+		SELECT 
+			ar.id, ar.partner_id, ar.department_id, ar.template_id,
+			ar.report_data, ar.created_by, ar.created_at,
+			d.name as department_name,
+			at.name as template_name
+		FROM analytics_reports ar
+		LEFT JOIN departments d ON ar.department_id = d.id
+		LEFT JOIN assessment_templates at ON ar.template_id = at.id
+		WHERE ar.partner_id = $1 AND ar.template_id = $2
+		ORDER BY ar.created_at DESC
 		LIMIT $3 OFFSET $4`
 
 	rows, err := r.db.QueryContext(ctx, query, partnerID, templateID, limit, offset)
@@ -114,11 +129,16 @@ func (r *AnalyticsReportRepository) ListByTemplate(ctx context.Context, partnerI
 
 func (r *AnalyticsReportRepository) ListByDepartmentAndTemplate(ctx context.Context, partnerID, departmentID, templateID int64, limit, offset int64) ([]*domain.AnalyticsReport, error) {
 	query := `
-		SELECT id, partner_id, department_id, template_id,
-			report_data, created_by, created_at
-		FROM analytics_reports
-		WHERE partner_id = $1 AND department_id = $2 AND template_id = $3
-		ORDER BY created_at DESC
+		SELECT 
+			ar.id, ar.partner_id, ar.department_id, ar.template_id,
+			ar.report_data, ar.created_by, ar.created_at,
+			d.name as department_name,
+			at.name as template_name
+		FROM analytics_reports ar
+		LEFT JOIN departments d ON ar.department_id = d.id
+		LEFT JOIN assessment_templates at ON ar.template_id = at.id
+		WHERE ar.partner_id = $1 AND ar.department_id = $2 AND ar.template_id = $3
+		ORDER BY ar.created_at DESC
 		LIMIT $4 OFFSET $5`
 
 	rows, err := r.db.QueryContext(ctx, query, partnerID, departmentID, templateID, limit, offset)
@@ -141,6 +161,8 @@ func (r *AnalyticsReportRepository) scanReports(rows *sql.Rows) ([]*domain.Analy
 
 	for rows.Next() {
 		var report domain.AnalyticsReport
+		var departmentName, templateName sql.NullString
+
 		err := rows.Scan(
 			&report.ID,
 			&report.PartnerID,
@@ -149,10 +171,19 @@ func (r *AnalyticsReportRepository) scanReports(rows *sql.Rows) ([]*domain.Analy
 			&report.ReportData,
 			&report.CreatedBy,
 			&report.CreatedAt,
+			&departmentName,
+			&templateName,
 		)
 
 		if err != nil {
 			return nil, err
+		}
+
+		if departmentName.Valid {
+			report.DepartmentName = departmentName.String
+		}
+		if templateName.Valid {
+			report.TemplateName = templateName.String
 		}
 
 		reports = append(reports, &report)

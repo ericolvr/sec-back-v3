@@ -30,8 +30,8 @@ jobs:
       - name: Validate required GitHub Variables
         run: |
           missing=""
-          [ -z "${{ vars.GCP_PROJECT_ID }}" ] && missing="$missing GCP_PROJECT_ID"
-          [ -z "${{ vars.GCP_REGION }}" ] && missing="$missing GCP_REGION"
+          [ -z "$PROJECT_ID" ] && missing="$missing GCP_PROJECT_ID"
+          [ -z "$REGION" ] && missing="$missing GCP_REGION"
           [ -z "${{ vars.DB_HOST }}" ] && missing="$missing DB_HOST"
           [ -z "${{ vars.DB_PORT }}" ] && missing="$missing DB_PORT"
           [ -z "${{ vars.DB_USER }}" ] && missing="$missing DB_USER"

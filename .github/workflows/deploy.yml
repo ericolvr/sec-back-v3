@@ -81,28 +81,8 @@ jobs:
             --cpu 1 \
             --max-instances 10 \
             --timeout 300 \
-            --set-env-vars PORT=8080 \
-            --set-env-vars SERVER_PORT=8080 \
-            --set-env-vars ENV=production \
-            --set-env-vars LOG_LEVEL=info \
-            --set-env-vars DB_HOST=${{ vars.DB_HOST }} \
-            --set-env-vars DB_PORT=${{ vars.DB_PORT }} \
-            --set-env-vars DB_USER=${{ vars.DB_USER }} \
-            --set-env-vars DB_NAME=${{ vars.DB_NAME }} \
-            --set-env-vars DB_SSLMODE=${{ vars.DB_SSLMODE }} \
-            --set-env-vars GCS_BUCKET_NAME=${{ vars.GCS_BUCKET_NAME }} \
-            --set-env-vars SMTP_HOST=${{ vars.SMTP_HOST }} \
-            --set-env-vars SMTP_PORT=${{ vars.SMTP_PORT }} \
-            --set-env-vars SMTP_USER=${{ vars.SMTP_USER }} \
-            --set-env-vars SMTP_FROM_EMAIL=${{ vars.SMTP_FROM_EMAIL }} \
-            --set-env-vars SMTP_FROM_NAME=${{ vars.SMTP_FROM_NAME }} \
-            --set-env-vars FRONTEND_URL=${{ vars.FRONTEND_URL }} \
-            --set-env-vars TWILIO_FROM=${{ vars.TWILIO_FROM }} \
-            --set-secrets DB_PASSWORD=nr1-back-db-password:latest \
-            --set-secrets JWT_SECRET=nr1-back-jwt-secret:latest \
-            --set-secrets SMTP_PASSWORD=nr1-back-smtp-password:latest \
-            --set-secrets TWILIO_ACCOUNT_SID=nr1-back-twilio-sid:latest \
-            --set-secrets TWILIO_AUTH_TOKEN=nr1-back-twilio-token:latest
+            --update-env-vars PORT=8080,SERVER_PORT=8080,ENV=production,LOG_LEVEL=info,DB_HOST=${{ vars.DB_HOST }},DB_PORT=${{ vars.DB_PORT }},DB_USER=${{ vars.DB_USER }},DB_NAME=${{ vars.DB_NAME }},DB_SSLMODE=${{ vars.DB_SSLMODE }},GCS_BUCKET_NAME=${{ vars.GCS_BUCKET_NAME }},SMTP_HOST=${{ vars.SMTP_HOST }},SMTP_PORT=${{ vars.SMTP_PORT }},SMTP_USER=${{ vars.SMTP_USER }},SMTP_FROM_EMAIL=${{ vars.SMTP_FROM_EMAIL }},SMTP_FROM_NAME="${{ vars.SMTP_FROM_NAME }}",FRONTEND_URL=${{ vars.FRONTEND_URL }},TWILIO_FROM=${{ vars.TWILIO_FROM }} \
+            --update-secrets DB_PASSWORD=nr1-back-db-password:latest,JWT_SECRET=nr1-back-jwt-secret:latest,SMTP_PASSWORD=nr1-back-smtp-password:latest,TWILIO_ACCOUNT_SID=nr1-back-twilio-sid:latest,TWILIO_AUTH_TOKEN=nr1-back-twilio-token:latest
 
       - name: Get Cloud Run URL
         id: deploy_url

@@ -69,12 +69,16 @@ func (s *DashboardService) GetCompanyDashboard(ctx context.Context, partnerID, c
 	overallRiskLevel := "low"
 	var alerts []string
 	departmentsAtRisk := 0
+	departmentsAtHighRisk := 0
 
 	for _, qip := range inProgressQuestionnaires {
 		for _, dept := range qip.Departments {
 			if dept.RiskLevel == "high" {
 				departmentsAtRisk++
+				departmentsAtHighRisk++
 				alerts = append(alerts, "Departamento "+dept.DepartmentName+" com risco alto")
+			} else if dept.RiskLevel == "medium" {
+				departmentsAtRisk++
 			}
 			if dept.CanClose {
 				alerts = append(alerts, "Departamento "+dept.DepartmentName+" pode ser fechado")
@@ -82,7 +86,25 @@ func (s *DashboardService) GetCompanyDashboard(ctx context.Context, partnerID, c
 		}
 	}
 
-	if departmentsAtRisk > len(departments)/2 {
+	// NOVO: Buscar também snapshots de questionários finalizados
+	closedSnapshots, _ := s.analyticsService.GetClosedDepartmentSnapshots(ctx, partnerID)
+	for _, snapshot := range closedSnapshots {
+		// Verificar se o snapshot é de um departamento desta empresa
+		dept, err := s.departmentRepo.GetByID(ctx, partnerID, snapshot.DepartmentID)
+		if err != nil || dept.CompanyID != companyID {
+			continue
+		}
+
+		if snapshot.RiskLevel == "high" {
+			departmentsAtRisk++
+			departmentsAtHighRisk++
+			alerts = append(alerts, "Departamento "+snapshot.DepartmentName+" com risco alto (finalizado)")
+		} else if snapshot.RiskLevel == "medium" {
+			departmentsAtRisk++
+		}
+	}
+
+	if departmentsAtHighRisk > 0 {
 		overallRiskLevel = "high"
 	} else if departmentsAtRisk > 0 {
 		overallRiskLevel = "medium"
@@ -138,6 +160,8 @@ func (s *DashboardService) GetPartnerDashboard(ctx context.Context, partnerID in
 		companyResponseRate := 0.0
 		companyRiskLevel := "low"
 		departmentsAtRisk := 0
+		departmentsAtHighRisk := 0
+		departmentsAtMediumRisk := 0
 
 		for _, q := range questionnaires {
 			// Calcular response rate a partir dos departamentos
@@ -148,6 +172,10 @@ func (s *DashboardService) GetPartnerDashboard(ctx context.Context, partnerID in
 					deptResponseSum += dept.ResponseRate
 					if dept.RiskLevel == "high" {
 						departmentsAtRisk++
+						departmentsAtHighRisk++
+					} else if dept.RiskLevel == "medium" {
+						departmentsAtRisk++
+						departmentsAtMediumRisk++
 					}
 				}
 				companyResponseRate += deptResponseSum / float64(totalDepts)
@@ -155,16 +183,53 @@ func (s *DashboardService) GetPartnerDashboard(ctx context.Context, partnerID in
 			totalActiveTemplates++
 		}
 
+		// NOVO: Buscar também snapshots de questionários finalizados
+		closedSnapshots, _ := s.analyticsService.GetClosedDepartmentSnapshots(ctx, partnerID)
+		snapshotCount := 0
+		snapshotResponseSum := 0.0
+
+		for _, snapshot := range closedSnapshots {
+			// Verificar se o snapshot é de um departamento desta empresa
+			dept, err := s.departmentRepo.GetByID(ctx, partnerID, snapshot.DepartmentID)
+			if err != nil || dept.CompanyID != company.ID {
+				continue
+			}
+
+			snapshotCount++
+			snapshotResponseSum += snapshot.ResponseRate
+
+			if snapshot.RiskLevel == "high" {
+				departmentsAtRisk++
+				departmentsAtHighRisk++
+			} else if snapshot.RiskLevel == "medium" {
+				departmentsAtRisk++
+				departmentsAtMediumRisk++
+			}
+		}
+
+		// Calcular response rate médio (incluindo snapshots)
+		totalQuestionnaires := len(questionnaires) + snapshotCount
 		if len(questionnaires) > 0 {
 			companyResponseRate = companyResponseRate / float64(len(questionnaires))
 			companiesWithActiveQuestionnaires++
 		}
+		if snapshotCount > 0 {
+			companyResponseRate = (companyResponseRate*float64(len(questionnaires)) + snapshotResponseSum) / float64(totalQuestionnaires)
+			if len(questionnaires) == 0 {
+				companiesWithActiveQuestionnaires++
+			}
+		}
 
-		if departmentsAtRisk > len(departments)/2 {
+		// Determinar nível de risco da empresa
+		if departmentsAtHighRisk > len(departments)/2 {
 			companyRiskLevel = "high"
 			companiesAtRisk++
-			alerts = append(alerts, company.Name+": múltiplos departamentos em risco")
-		} else if departmentsAtRisk > 0 {
+			alerts = append(alerts, company.Name+": múltiplos departamentos em risco alto")
+		} else if departmentsAtHighRisk > 0 {
+			companyRiskLevel = "high"
+			companiesAtRisk++
+			alerts = append(alerts, company.Name+": departamentos em risco alto")
+		} else if departmentsAtMediumRisk > 0 {
 			companyRiskLevel = "medium"
 		}
 
@@ -259,11 +324,14 @@ func (s *DashboardService) GetGlobalDashboard(ctx context.Context, partnerID, co
 		inProgressTemplates = []*domain.TemplateInProgress{}
 	}
 
-	// 3. Calcular métricas principais
-	metrics := s.calculateGlobalMetrics(inProgressTemplates)
+	// 2.1. NOVO: Buscar snapshots de questionários finalizados
+	closedSnapshots, _ := s.analyticsService.GetClosedDepartmentSnapshots(ctx, partnerID)
 
-	// 4. Montar overview de departamentos
-	departmentsOverview := s.buildDepartmentsOverview(inProgressTemplates)
+	// 3. Calcular métricas principais (incluindo snapshots)
+	metrics := s.calculateGlobalMetrics(inProgressTemplates, closedSnapshots, companyID)
+
+	// 4. Montar overview de departamentos (incluindo snapshots)
+	departmentsOverview := s.buildDepartmentsOverview(inProgressTemplates, closedSnapshots, companyID)
 
 	// 5. Calcular alertas
 	alerts := s.calculateDashboardAlerts(departmentsOverview, partnerID, companyID)
@@ -282,11 +350,12 @@ func (s *DashboardService) GetGlobalDashboard(ctx context.Context, partnerID, co
 }
 
 // calculateGlobalMetrics calcula as métricas principais do dashboard
-func (s *DashboardService) calculateGlobalMetrics(templates []*domain.TemplateInProgress) *domain.GlobalMetrics {
+func (s *DashboardService) calculateGlobalMetrics(templates []*domain.TemplateInProgress, snapshots []*domain.DepartmentSnapshot, companyID int64) *domain.GlobalMetrics {
 	totalActiveAssessments := len(templates)
 
 	var totalResponseRate float64
 	var departmentsAtRisk int
+	var departmentsAtHighRisk int
 	overallRiskLevel := "low"
 
 	for _, template := range templates {
@@ -297,6 +366,7 @@ func (s *DashboardService) calculateGlobalMetrics(templates []*domain.TemplateIn
 
 		// Contar departamentos em risco
 		departmentsAtRisk += template.DepartmentsWithHighRisk + template.DepartmentsWithMediumRisk
+		departmentsAtHighRisk += template.DepartmentsWithHighRisk
 
 		// Determinar risco geral
 		if template.OverallRiskLevel == "high" {
@@ -306,10 +376,38 @@ func (s *DashboardService) calculateGlobalMetrics(templates []*domain.TemplateIn
 		}
 	}
 
+	// NOVO: Incluir snapshots finalizados no cálculo
+	snapshotCount := 0
+	for _, snapshot := range snapshots {
+		// Verificar se o snapshot é desta empresa
+		dept, err := s.departmentRepo.GetByID(context.Background(), snapshot.DepartmentID, snapshot.DepartmentID)
+		if err != nil {
+			continue
+		}
+		if dept.CompanyID != companyID {
+			continue
+		}
+
+		snapshotCount++
+		totalResponseRate += snapshot.ResponseRate
+
+		if snapshot.RiskLevel == "high" {
+			departmentsAtRisk++
+			departmentsAtHighRisk++
+			overallRiskLevel = "high"
+		} else if snapshot.RiskLevel == "medium" {
+			departmentsAtRisk++
+			if overallRiskLevel != "high" {
+				overallRiskLevel = "medium"
+			}
+		}
+	}
+
 	// Calcular média da taxa de resposta
 	avgResponseRate := 0.0
-	if len(templates) > 0 {
-		avgResponseRate = totalResponseRate / float64(len(templates))
+	totalAssessments := len(templates) + snapshotCount
+	if totalAssessments > 0 {
+		avgResponseRate = totalResponseRate / float64(totalAssessments)
 	}
 
 	return &domain.GlobalMetrics{
@@ -324,7 +422,7 @@ func (s *DashboardService) calculateGlobalMetrics(templates []*domain.TemplateIn
 }
 
 // buildDepartmentsOverview monta overview de departamentos
-func (s *DashboardService) buildDepartmentsOverview(templates []*domain.TemplateInProgress) []*domain.DepartmentOverview {
+func (s *DashboardService) buildDepartmentsOverview(templates []*domain.TemplateInProgress, snapshots []*domain.DepartmentSnapshot, companyID int64) []*domain.DepartmentOverview {
 	var overview []*domain.DepartmentOverview
 
 	for _, template := range templates {
@@ -344,6 +442,30 @@ func (s *DashboardService) buildDepartmentsOverview(templates []*domain.Template
 				Reliability:    dept.Reliability,
 			})
 		}
+	}
+
+	// NOVO: Incluir snapshots finalizados no overview
+	for _, snapshot := range snapshots {
+		// Verificar se o snapshot é desta empresa
+		dept, err := s.departmentRepo.GetByID(context.Background(), snapshot.DepartmentID, snapshot.DepartmentID)
+		if err != nil || dept.CompanyID != companyID {
+			continue
+		}
+
+		overview = append(overview, &domain.DepartmentOverview{
+			DepartmentID:   snapshot.DepartmentID,
+			DepartmentName: snapshot.DepartmentName,
+			ResponseRate:   snapshot.ResponseRate,
+			TotalEmployees: snapshot.TotalEmployees,
+			Responded:      snapshot.CompletedResponses,
+			RiskLevel:      snapshot.RiskLevel,
+			Status:         "closed",
+			CanClose:       false,
+			TemplateID:     snapshot.TemplateID,
+			TemplateName:   snapshot.TemplateName,
+			AverageScore:   snapshot.AverageScore,
+			Reliability:    snapshot.Reliability,
+		})
 	}
 
 	return overview

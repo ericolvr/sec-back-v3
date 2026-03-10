@@ -7,7 +7,9 @@ on:
   workflow_dispatch:
 
 env:
+  PROJECT_ID: nr1-back
   SERVICE_NAME: nr1-back-api
+  REGION: us-central1
 
 jobs:
   deploy:
@@ -17,19 +19,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Sanitize and validate project variables
-        id: sanitize
+      - name: Validate required GitHub Variables
         run: |
-          PROJECT_ID=$(echo "${{ vars.GCP_PROJECT_ID }}" | tr -d '\n\r' | xargs)
-          REGION=$(echo "${{ vars.GCP_REGION }}" | tr -d '\n\r' | xargs)
-          echo "PROJECT_ID=$PROJECT_ID" >> $GITHUB_ENV
-          echo "REGION=$REGION" >> $GITHUB_ENV
-          echo "Sanitized PROJECT_ID: [$PROJECT_ID]"
-          echo "Sanitized REGION: [$REGION]"
-          
           missing=""
-          [ -z "$PROJECT_ID" ] && missing="$missing GCP_PROJECT_ID"
-          [ -z "$REGION" ] && missing="$missing GCP_REGION"
           [ -z "${{ vars.DB_HOST }}" ] && missing="$missing DB_HOST"
           [ -z "${{ vars.DB_PORT }}" ] && missing="$missing DB_PORT"
           [ -z "${{ vars.DB_USER }}" ] && missing="$missing DB_USER"

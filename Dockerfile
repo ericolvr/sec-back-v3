@@ -5,7 +5,7 @@ WORKDIR /src
 ENV GOTOOLCHAIN=go1.23.12
 
 COPY go.mod go.sum ./
-RUN go mod download
+RUN go version && go mod download -x
 
 COPY . .
 

@@ -84,14 +84,19 @@ func (r *AssessmentAssignmentRepository) GetByID(ctx context.Context, partnerID,
 
 func (r *AssessmentAssignmentRepository) GetByTemplateAndDepartment(ctx context.Context, partnerID, templateID, departmentID int64) (*domain.AssessmentAssignment, error) {
 	query := `
-		SELECT id, partner_id, template_id, department_ids, active, started_at, closed_at, created_at, updated_at
-		FROM assessment_assignments
-		WHERE partner_id = $1 AND template_id = $2 AND $3 = ANY(department_ids)`
+		SELECT 
+			aa.id, aa.partner_id, aa.template_id, aa.department_ids, aa.active, 
+			aa.started_at, aa.closed_at, aa.created_at, aa.updated_at,
+			at.name as template_name
+		FROM assessment_assignments aa
+		LEFT JOIN assessment_templates at ON aa.template_id = at.id
+		WHERE aa.partner_id = $1 AND aa.template_id = $2 AND $3 = ANY(aa.department_ids)`
 
 	var qa domain.AssessmentAssignment
 	err := r.db.QueryRowContext(ctx, query, partnerID, templateID, departmentID).Scan(
 		&qa.ID, &qa.PartnerID, &qa.TemplateID, pq.Array(&qa.DepartmentIDs), &qa.Active,
 		&qa.StartedAt, &qa.ClosedAt, &qa.CreatedAt, &qa.UpdatedAt,
+		&qa.TemplateName,
 	)
 
 	if err != nil {

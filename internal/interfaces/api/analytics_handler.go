@@ -88,7 +88,27 @@ func (h *AnalyticsHandler) GetSnapshot(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, snapshot)
+	// Decodificar report_data para retornar JSON ao invés de base64
+	analytics, err := snapshot.GetAnalytics()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to decode report data"})
+		return
+	}
+
+	// Retornar snapshot com report_data decodificado
+	response := gin.H{
+		"id":              snapshot.ID,
+		"partner_id":      snapshot.PartnerID,
+		"department_id":   snapshot.DepartmentID,
+		"department_name": snapshot.DepartmentName,
+		"template_id":     snapshot.TemplateID,
+		"template_name":   snapshot.TemplateName,
+		"report_data":     analytics,
+		"created_by":      snapshot.CreatedBy,
+		"created_at":      snapshot.CreatedAt,
+	}
+
+	c.JSON(http.StatusOK, response)
 }
 
 // ListReportsByDepartment lista snapshots de um departamento específico
@@ -150,7 +170,29 @@ func (h *AnalyticsHandler) ListReports(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, reports)
+	// Decodificar report_data de cada snapshot
+	response := make([]gin.H, 0, len(reports))
+	for _, report := range reports {
+		analytics, err := report.GetAnalytics()
+		if err != nil {
+			// Se falhar ao decodificar, pular este report
+			continue
+		}
+
+		response = append(response, gin.H{
+			"id":              report.ID,
+			"partner_id":      report.PartnerID,
+			"department_id":   report.DepartmentID,
+			"department_name": report.DepartmentName,
+			"template_id":     report.TemplateID,
+			"template_name":   report.TemplateName,
+			"report_data":     analytics,
+			"created_by":      report.CreatedBy,
+			"created_at":      report.CreatedAt,
+		})
+	}
+
+	c.JSON(http.StatusOK, response)
 }
 
 // ListSnapshots alias para ListReports

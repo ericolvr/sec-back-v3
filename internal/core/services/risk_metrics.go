@@ -155,7 +155,7 @@ func (s *RiskMetricsService) CalculateAndStore(ctx context.Context, partnerID, c
 	// Usar fórmula do banco para calcular risco e confiabilidade
 	riskLevel := formula.CalculateRiskLevel(averageScore)
 	reliability := formula.CalculateReliability(responseRate)
-	canCalculateRisk := responseRate >= formula.ReliabilityExcellentMin
+	canCalculateRisk := responseRate >= formula.ReliabilityAcceptableMin
 
 	metrics := &domain.RiskMetrics{
 		PartnerID:            partnerID,

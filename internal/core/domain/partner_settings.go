@@ -7,13 +7,13 @@ import (
 )
 
 type PartnerSettings struct {
-	PartnerID                 int64     `json:"partner_id"`
-	MinResponseRateToClose    float64   `json:"min_response_rate_to_close"`
-	MinResponseRateReliable   float64   `json:"min_response_rate_reliable"`
-	NotifyOnThreshold         bool      `json:"notify_on_threshold"`
-	AutoGenerateActionPlans   bool      `json:"auto_generate_action_plans"`
-	CreatedAt                 time.Time `json:"created_at"`
-	UpdatedAt                 time.Time `json:"updated_at"`
+	PartnerID               int64     `json:"partner_id"`
+	MinResponseRateToClose  float64   `json:"min_response_rate_to_close"`
+	MinResponseRateReliable float64   `json:"min_response_rate_reliable"`
+	NotifyOnThreshold       bool      `json:"notify_on_threshold"`
+	AutoGenerateActionPlans bool      `json:"auto_generate_action_plans"`
+	CreatedAt               time.Time `json:"created_at"`
+	UpdatedAt               time.Time `json:"updated_at"`
 }
 
 type PartnerSettingsRepository interface {
@@ -43,11 +43,19 @@ func (ps *PartnerSettings) Validate() error {
 	return nil
 }
 
-func DefaultPartnerSettings(partnerID int64) *PartnerSettings {
+func DefaultPartnerSettings(partnerID int64, formula *CalculationFormula) *PartnerSettings {
+	minResponseRateToClose := 70.0
+	minResponseRateReliable := 30.0
+
+	if formula != nil {
+		minResponseRateToClose = formula.ReliabilityExcellentMin
+		minResponseRateReliable = formula.ReliabilityAcceptableMin
+	}
+
 	return &PartnerSettings{
 		PartnerID:               partnerID,
-		MinResponseRateToClose:  70.0,
-		MinResponseRateReliable: 30.0,
+		MinResponseRateToClose:  minResponseRateToClose,
+		MinResponseRateReliable: minResponseRateReliable,
 		NotifyOnThreshold:       true,
 		AutoGenerateActionPlans: true,
 	}

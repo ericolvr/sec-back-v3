@@ -52,7 +52,7 @@ func (r *PartnerSettingsRepository) GetByPartnerID(ctx context.Context, partnerI
 	)
 
 	if err == sql.ErrNoRows {
-		return domain.DefaultPartnerSettings(partnerID), nil
+		return nil, nil
 	}
 
 	if err != nil {

@@ -87,7 +87,11 @@ func (s *AnalyticsService) GetDepartmentReport(ctx context.Context, partnerID, c
 	// 4. Buscar configurações do partner (para critério de fechamento)
 	settings, err := s.settingsRepo.GetByPartnerID(ctx, partnerID)
 	if err != nil {
-		settings = domain.DefaultPartnerSettings(partnerID)
+		formula, _ := s.formulaRepo.GetActive(ctx, partnerID)
+		if formula == nil {
+			formula = domain.DefaultCalculationFormula(partnerID)
+		}
+		settings = domain.DefaultPartnerSettings(partnerID, formula)
 	}
 
 	// 5. Determinar se pode fechar
@@ -165,7 +169,11 @@ func (s *AnalyticsService) GetCompanyReport(ctx context.Context, partnerID, comp
 	departmentsAtRisk := 0
 	settings, _ := s.settingsRepo.GetByPartnerID(ctx, partnerID)
 	if settings == nil {
-		settings = domain.DefaultPartnerSettings(partnerID)
+		formula, _ := s.formulaRepo.GetActive(ctx, partnerID)
+		if formula == nil {
+			formula = domain.DefaultCalculationFormula(partnerID)
+		}
+		settings = domain.DefaultPartnerSettings(partnerID, formula)
 	}
 
 	for _, dept := range departments {
@@ -332,7 +340,11 @@ func (s *AnalyticsService) GetInProgressTemplates(ctx context.Context, partnerID
 
 	settings, _ := s.settingsRepo.GetByPartnerID(ctx, partnerID)
 	if settings == nil {
-		settings = domain.DefaultPartnerSettings(partnerID)
+		formula, _ := s.formulaRepo.GetActive(ctx, partnerID)
+		if formula == nil {
+			formula = domain.DefaultCalculationFormula(partnerID)
+		}
+		settings = domain.DefaultPartnerSettings(partnerID, formula)
 	}
 
 	// 2. Mapear templates ativos (agrupados por template_id)

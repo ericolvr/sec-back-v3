@@ -44,11 +44,11 @@ func (ps *PartnerSettings) Validate() error {
 }
 
 func DefaultPartnerSettings(partnerID int64, formula *CalculationFormula) *PartnerSettings {
-	minResponseRateToClose := 50.0
+	minResponseRateToClose := 30.0
 	minResponseRateReliable := 30.0
 
 	if formula != nil {
-		minResponseRateToClose = formula.ReliabilityGoodMin
+		minResponseRateToClose = formula.ReliabilityAcceptableMin
 		minResponseRateReliable = formula.ReliabilityAcceptableMin
 	}
 

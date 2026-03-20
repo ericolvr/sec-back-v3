@@ -12,7 +12,7 @@ type User struct {
 	Name      string    `json:"name"`
 	Mobile    string    `json:"mobile,omitempty"`
 	Password  string    `json:"password"`
-	Type      int       `json:"type"` // 1 = master, 2 = client
+	Type      int       `json:"type"` // 1 = master, 2 = administrator, 3 = colaborator
 	Active    bool      `json:"active"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
@@ -45,7 +45,7 @@ func (u *User) Validate() error {
 		return errors.New("mobile is required")
 	}
 	if u.Type < 1 || u.Type > 3 {
-		return errors.New("type must be 1 (admin) or 2 (client)")
+		return errors.New("type must be 1 (master) or 2 (administrator) or 3 (colaborator)")
 	}
 	return nil
 }
